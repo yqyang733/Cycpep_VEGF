@@ -1,0 +1,67 @@
+title       = Umbrella pulling simulation
+;define      = -DPOSRES -DPOSRES_FC_BB=4000.0 -DPOSRES_FC_SC=100.0 -DPOSRES_FC_LIPID=0.0
+; Run parameters
+integrator  = md
+dt          = 0.002
+tinit       = 0
+nsteps      = 125000000
+nstcomm     = 100
+; Output parameters
+nstxout     = 0      ; every 10 ps
+nstvout     = 0
+nstfout     = 0
+nstxtcout   = 2500       ; every 1 ps
+nstenergy   = 250000
+; Bond parameters
+constraint_algorithm    = lincs
+constraints             = h-bonds
+continuation            = yes       ; continuing from NPT
+; Single-range cutoff scheme
+cutoff-scheme   = Verlet
+nstlist         = 20
+ns_type         = grid
+rlist           = 1.4
+rcoulomb        = 1.4
+rvdw            = 1.4
+; PME electrostatics parameters
+coulombtype     = PME
+fourierspacing  = 0.12
+fourier_nx      = 0
+fourier_ny      = 0
+fourier_nz      = 0
+pme_order       = 4
+ewald_rtol      = 1e-5
+optimize_fft    = yes
+; Berendsen temperature coupling is on in two groups
+tcoupl          = Nose-Hoover
+tc_grps         = SOLU MEMB SOLV
+tau_t           = 1.0 1.0 1.0
+ref_t           = 303.15 303.15 303.15
+; Pressure coupling is on
+pcoupl          = Parrinello-Rahman
+pcoupltype      = semiisotropic
+tau_p           = 5.0
+compressibility = 4.5e-5  4.5e-5
+ref_p           = 1.0     1.0
+refcoord_scaling = com
+; Generate velocities is off
+gen_vel     = no
+; Periodic boundary conditions are on in all directions
+pbc     = xyz
+; Long-range dispersion correction
+DispCorr    = EnerPres
+; Pull code
+pull                    = yes
+pull_ncoords            = 1         ; only one reaction coordinate
+pull_ngroups            = 2         ; two groups defining one reaction coordinate
+pull_group1_name        = pull
+pull_group2_name        = target
+pull_coord1_type        = umbrella  ; harmonic potential
+pull_coord1_geometry    = distance  ; simple distance increase
+pull_coord1_dim         = Y Y Y
+pull_coord1_groups      = 1 2
+pull_coord1_start       = yes       ; define initial COM distance > 0
+pull_coord1_rate        = 0.0001      ; 0.01 nm per ps = 10 nm per ns
+pull_coord1_k           = 1000      ; kJ mol^-1 nm^-2
+;pull-group1-pbcatom     = 1394
+;pull-pbc-ref-prev-step-com = yes

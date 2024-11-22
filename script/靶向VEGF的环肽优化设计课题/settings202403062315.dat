@@ -1,0 +1,11 @@
+bond_pdb: /public/home/yqyang/VEGF/FEP/L-G-D/V5I/FEP/bonded_in/system.pdb
+bond_psf: /public/home/yqyang/VEGF/FEP/L-G-D/V5I/FEP/bonded_in/system.psf
+free_pdb: /public/home/yqyang/VEGF/FEP/L-G-D/V5I/FEP/free_in/system.pdb
+free_psf: /public/home/yqyang/VEGF/FEP/L-G-D/V5I/FEP/free_in/system.psf
+segname: MUT
+resid:
+mutation:
+vmd_path: /public/home/yqyang/software/vmd-1.9.4a55-installed/bin/vmd
+ff_path: /public/home/yqyang/file/vegf-toppar
+submit_mode: 1
+duplicate: 5
