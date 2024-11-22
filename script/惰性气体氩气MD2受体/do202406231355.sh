@@ -1,1 +1,0 @@
-for i in `cat submit.dat`;do cd ${i};sbatch job.sh;cd ..;done

@@ -1,2 +1,0 @@
-gmx trjcat -f run1/pull/pull.xtc run2/pull/pull.xtc run3/pull/pull.xtc -settime -o pull.xtc
-gmx distance -s ../pull/pull.tpr -f ../pull/pull.xtc -n ../pull/pull_index.ndx -select 'com of group "Chain_A" plus com of group "Chain_B"' -oall dist.xvg

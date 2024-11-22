@@ -1,1 +1,0 @@
-for i in `seq 0 99`;do qsub job_topol_${i}.sh;done

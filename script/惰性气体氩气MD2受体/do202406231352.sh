@@ -1,1 +1,0 @@
-a=1;for i in `cat time\_pick.dat`;do mkdir win_${a};echo 0|gmx trjconv -s ../pull/pull.tpr -f ../pull/pull.xtc -o ./win_${a}/win_${a}.gro -b ${i} -e ${i};a=`echo "\${a}+1"|bc`;done
