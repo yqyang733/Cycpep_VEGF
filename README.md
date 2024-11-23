@@ -1,3 +1,7 @@
-<font face="黑体">我是黑体字</font>
-<font face="微软雅黑">我是微软雅黑</font>
-<font face="Time New Roman">我是Time New Roman</font>
+Use `git status` to list all new or modified files that haven't yet been committed.
+Some basic Git commands are:
+```
+git status
+git add
+git commit
+```
