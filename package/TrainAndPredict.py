@@ -86,7 +86,7 @@ def select_descriptors_data(lst):
 
     return input_vec
 
-def model_train(lst):
+def GB_model_train(lst):
 
     clf = GradientBoosting(n_estimators = n_estimators, max_depth = max_depth, learning_rate = learning_rate).build()
 
@@ -94,53 +94,89 @@ def model_train(lst):
     train_labels = []
     
     all_vec_lst = data_prepare(lst)
-    print("all_vec_lst", all_vec_lst)
+    # print("all_vec_lst", all_vec_lst)
     input_vec = select_descriptors_data(all_vec_lst)
-    print("input_vec", input_vec)
+    # print("input_vec", input_vec)
     random.shuffle(input_vec)
 
     for a in input_vec:
         train_feature.append(a[1])
         train_labels.append(a[2])
     
-    print("train_feature", train_feature)
-    print("train_labels", train_labels)
+    # print("train_feature", train_feature)
+    # print("train_labels", train_labels)
     
     train_feature = np.array([np.concatenate(sub_array).tolist() for sub_array in train_feature])  # 如果多个channel将多个channel的feature数组根据channel数目依次拼接。一个channel的所有feature接着下一个channel的所有feature。
     # train_feature = np.array([np.array(sub_array).T.flatten().tolist() for sub_array in train_feature])   # 如果多个channel将多个channel的fenture数组根据feature的次序进行拼接。第一个feature的所有channel接着下一个feature的所有channel。
 
-    print("train_feature", train_feature)
+    # print("train_feature", train_feature)
     rf = clf.fit(train_feature, train_labels)
 
     return rf
 
-def model_predict(lst, model):
+def GB_model_predict(lst, model):
 
     predict_rt = open(os.path.join("results", "all_individal_pre.csv"), "w")
     predict_rt.write("mut,mean_pred,se_pred\n")
+    predict_confs_rt = open(os.path.join("results", "all_confs_pre.csv"), "w")
+    predict_confs_rt.write("mut,value_pre\n")
 
     for i in lst:
 
         predict_feature = []
         predict_labels = []
+        predict_names = []
         
         vec_every = data_prepare([i,])
         input_vec = select_descriptors_data(vec_every)
 
         for a in input_vec:
+            predict_names.append(a[0])
             predict_feature.append(a[1])
             predict_labels.append(a[2])
 
         predict_feature = np.array([np.concatenate(sub_array).tolist() for sub_array in predict_feature])  # 如果多个channel将多个channel的feature数组根据channel数目依次拼接。一个channel的所有feature接着下一个channel的所有feature。
-        # train_feature = np.array([np.array(sub_array).T.flatten().tolist() for sub_array in train_feature])   # 如果多个channel将多个channel的fenture数组根据feature的次序进行拼接。第一个feature的所有channel接着下一个feature的所有channel。
+        # predict_feature = np.array([np.array(sub_array).T.flatten().tolist() for sub_array in predict_feature])   # 如果多个channel将多个channel的fenture数组根据feature的次序进行拼接。第一个feature的所有channel接着下一个feature的所有channel。
 
         pred_predict = model.predict(predict_feature)
 
         pred_mean = np.mean(pred_predict)
         pred_se = np.std(pred_predict)
         predict_rt.write(i+","+str(pred_mean)+","+str(pred_se)+"\n")
+
+        for i in range(len(predict_names)):
+            predict_confs_rt.write(predict_names[i]+","+str(pred_predict[i])+"\n")
+        predict_confs_rt.close()
         
     predict_rt.close()
+
+def GB_model_pretraindata(lst, model):
+
+    predict_trainconfs_rt = open(os.path.join("results", "all_trainconfs_prelab.csv"), "w")
+    predict_trainconfs_rt.write("mut,value_label,value_pre\n")
+
+    for i in lst:
+
+        predict_trainfeature = []
+        predict_trainlabels = []
+        predict_trainnames = []
+        
+        vec_every = data_prepare([i,])
+        input_vec = select_descriptors_data(vec_every)
+
+        for a in input_vec:
+            predict_trainnames.append(a[0])
+            predict_trainfeature.append(a[1])
+            predict_trainlabels.append(a[2])
+
+        predict_trainfeature = np.array([np.concatenate(sub_array).tolist() for sub_array in predict_trainfeature])  # 如果多个channel将多个channel的feature数组根据channel数目依次拼接。一个channel的所有feature接着下一个channel的所有feature。
+        # predict_trainfeature = np.array([np.array(sub_array).T.flatten().tolist() for sub_array in predict_trainfeature])   # 如果多个channel将多个channel的fenture数组根据feature的次序进行拼接。第一个feature的所有channel接着下一个feature的所有channel。
+
+        pred_trainpredict = model.predict(predict_trainfeature)
+
+        for i in range(len(predict_trainnames)):
+            predict_trainconfs_rt.write(predict_trainnames[i]+","+str(predict_trainlabels[i])+","+str(pred_trainpredict[i])+"\n")
+        predict_trainconfs_rt.close()
 
 def forward_selection(all_vec_train):
 

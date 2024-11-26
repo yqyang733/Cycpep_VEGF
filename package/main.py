@@ -1,12 +1,11 @@
 import os
 import time
 import pickle
-import random
 
 from config import Config
 from GetDescriptors import get_single_snapshot, read_complexes, remove_files, get_all_features
 from GetFeatureMatrix import get_input
-from TrainAndPredict import *
+from TrainAndPredict import GB_model_train, GB_model_predict, GB_model_pretraindata
 
 trajpath             =       Config().trajpath
 refstructure         =       Config().refstructure
@@ -129,7 +128,9 @@ def train():
     all_lst = get_lst(trainlist)
     all_lst = [i.split(",")[0] for i in all_lst]
 
-    model = model_train(all_lst)
+    model = GB_model_train(all_lst)
+
+    GB_model_pretraindata(model, all_lst)
 
     return model
 
@@ -137,17 +138,17 @@ def predict(model):
 
     all_lst = get_lst(predictlist)
 
-    model_predict(all_lst, model)
+    GB_model_predict(all_lst, model)
 
 def run():
     
     start = time.time()
 
-    mk_files()
-    get_every_descriptor("train")
-    get_every_descriptor("predict")
-    get_all_descriptor()
-    get_feature_matrix()
+    # mk_files()
+    # get_every_descriptor("train")
+    # get_every_descriptor("predict")
+    # get_all_descriptor()
+    # get_feature_matrix()
     model = train()
     predict(model)
         
