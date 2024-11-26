@@ -30,6 +30,9 @@ class Config():
         self.max_depth = 3
         self.learning_rate = 0.05
 
+        # add noise or not
+        self.noise = False
+
         self.epoch = 50
 
         # MLP

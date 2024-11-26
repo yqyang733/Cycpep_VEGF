@@ -126,11 +126,10 @@ def get_feature_matrix():
 def train():
 
     all_lst = get_lst(trainlist)
-    all_lst = [i.split(",")[0] for i in all_lst]
 
-    model = GB_model_train(all_lst)
+    model, input_vec = GB_model_train(all_lst)
 
-    GB_model_pretraindata(model, all_lst)
+    GB_model_pretraindata(model, input_vec)
 
     return model
 

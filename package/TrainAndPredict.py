@@ -18,6 +18,7 @@ learning_rate        =       Config().learning_rate
 mlp_n_hidden         =       Config().n_hidden
 epoch                =       Config().epoch
 channels             =       Config().channels
+noise                =       Config().noise
 
 def split_into_groups(data, group_size):
     """
@@ -32,7 +33,40 @@ def split_into_groups(data, group_size):
     """
     return [[data[i] for i in range(j, len(data), group_size)] for j in range(group_size)]
 
-def data_prepare(lst):
+def traindata_prepare(lst):
+
+    all_vec_lst = []
+
+    for i in lst:
+        
+        mut_name = i.replace("\n", "").split(",")[0]
+        ddg = i.replace("\n", "").split(",")[1]
+        se = i.replace("\n", "").split(",")[2]
+
+        with open(os.path.join("Descriptors", "input_vectors_" + mut_name + ".pkl"), "rb") as f:
+            graphs_dict, labels = pickle.load(f)
+
+        if noise:
+            labels = np.random.normal(loc=ddg, scale=se, size=len(labels))
+        else:
+            labels = np.array([ddg] * len(labels))
+
+        groups = split_into_groups(list(graphs_dict.keys()), int(len(list(graphs_dict.keys()))/channels))
+
+        for b in groups:
+            frame_names = "/".join(b)
+            graph = []
+            label = []
+            for a in b:
+                graph.append(graphs_dict[a])
+                label.append(labels[a])
+            label_mean = np.mean(label)
+        
+            all_vec_lst.append([frame_names, graph, label_mean])
+    
+    return all_vec_lst
+
+def predictdata_prepare(lst):
 
     all_vec_lst = []
 
@@ -90,16 +124,18 @@ def GB_model_train(lst):
 
     clf = GradientBoosting(n_estimators = n_estimators, max_depth = max_depth, learning_rate = learning_rate).build()
 
+    train_names = []
     train_feature = []
     train_labels = []
     
-    all_vec_lst = data_prepare(lst)
+    all_vec_lst = traindata_prepare(lst)
     # print("all_vec_lst", all_vec_lst)
     input_vec = select_descriptors_data(all_vec_lst)
     # print("input_vec", input_vec)
     random.shuffle(input_vec)
 
     for a in input_vec:
+        train_names.append(a[0])
         train_feature.append(a[1])
         train_labels.append(a[2])
     
@@ -112,7 +148,7 @@ def GB_model_train(lst):
     # print("train_feature", train_feature)
     rf = clf.fit(train_feature, train_labels)
 
-    return rf
+    return rf, input_vec
 
 def GB_model_predict(lst, model):
 
@@ -127,7 +163,7 @@ def GB_model_predict(lst, model):
         predict_labels = []
         predict_names = []
         
-        vec_every = data_prepare([i,])
+        vec_every = predictdata_prepare([i,])
         input_vec = select_descriptors_data(vec_every)
 
         for a in input_vec:
@@ -155,28 +191,23 @@ def GB_model_pretraindata(lst, model):
     predict_trainconfs_rt = open(os.path.join("results", "all_trainconfs_prelab.csv"), "w")
     predict_trainconfs_rt.write("mut,value_label,value_pre\n")
 
-    for i in lst:
+    predict_trainnames = []
+    predict_trainfeature = []
+    predict_trainlabels = []
 
-        predict_trainfeature = []
-        predict_trainlabels = []
-        predict_trainnames = []
-        
-        vec_every = data_prepare([i,])
-        input_vec = select_descriptors_data(vec_every)
+    for a in lst:
+        predict_trainnames.append(a[0])
+        predict_trainfeature.append(a[1])
+        predict_trainlabels.append(a[2])
 
-        for a in input_vec:
-            predict_trainnames.append(a[0])
-            predict_trainfeature.append(a[1])
-            predict_trainlabels.append(a[2])
+    predict_trainfeature = np.array([np.concatenate(sub_array).tolist() for sub_array in predict_trainfeature])  # 如果多个channel将多个channel的feature数组根据channel数目依次拼接。一个channel的所有feature接着下一个channel的所有feature。
+    # predict_trainfeature = np.array([np.array(sub_array).T.flatten().tolist() for sub_array in predict_trainfeature])   # 如果多个channel将多个channel的fenture数组根据feature的次序进行拼接。第一个feature的所有channel接着下一个feature的所有channel。
 
-        predict_trainfeature = np.array([np.concatenate(sub_array).tolist() for sub_array in predict_trainfeature])  # 如果多个channel将多个channel的feature数组根据channel数目依次拼接。一个channel的所有feature接着下一个channel的所有feature。
-        # predict_trainfeature = np.array([np.array(sub_array).T.flatten().tolist() for sub_array in predict_trainfeature])   # 如果多个channel将多个channel的fenture数组根据feature的次序进行拼接。第一个feature的所有channel接着下一个feature的所有channel。
+    pred_trainpredict = model.predict(predict_trainfeature)
 
-        pred_trainpredict = model.predict(predict_trainfeature)
-
-        for i in range(len(predict_trainnames)):
-            predict_trainconfs_rt.write(predict_trainnames[i]+","+str(predict_trainlabels[i])+","+str(pred_trainpredict[i])+"\n")
-        predict_trainconfs_rt.close()
+    for i in range(len(predict_trainnames)):
+        predict_trainconfs_rt.write(predict_trainnames[i]+","+str(predict_trainlabels[i])+","+str(pred_trainpredict[i])+"\n")
+    predict_trainconfs_rt.close()
 
 def forward_selection(all_vec_train):
 
@@ -258,7 +289,7 @@ def MLP_model_train(lst):
     train_feature = []
     train_labels = []
     
-    all_vec_lst = data_prepare(lst)
+    all_vec_lst = traindata_prepare(lst)
     input_vec = select_descriptors_data(all_vec_lst)
     random.shuffle(input_vec)
 
@@ -292,7 +323,7 @@ def MLP_model_predict(lst, model):
         predict_feature = []
         predict_labels = []
         
-        vec_every = data_prepare([i,])
+        vec_every = predictdata_prepare([i,])
         input_vec = select_descriptors_data(vec_every)
 
         for a in input_vec:
@@ -316,7 +347,7 @@ def CNN_model_train(lst):
     train_feature = []
     train_labels = []
     
-    all_vec_lst = data_prepare(lst)
+    all_vec_lst = traindata_prepare(lst)
     input_vec = select_descriptors_data(all_vec_lst)
     random.shuffle(input_vec)
 
@@ -351,7 +382,7 @@ def CNN_model_predict(lst, model):
         predict_feature = []
         predict_labels = []
         
-        vec_every = data_prepare([i,])
+        vec_every = predictdata_prepare([i,])
         input_vec = select_descriptors_data(vec_every)
 
         for a in input_vec:
@@ -376,7 +407,7 @@ def Transformer_model_train(lst):
     train_feature = []
     train_labels = []
     
-    all_vec_lst = data_prepare(lst)
+    all_vec_lst = traindata_prepare(lst)
     input_vec = select_descriptors_data(all_vec_lst)
     random.shuffle(input_vec)
 
@@ -413,7 +444,7 @@ def Transformer_model_predict(lst, model):
         predict_feature = []
         predict_labels = []
         
-        vec_every = data_prepare([i,])
+        vec_every = predictdata_prepare([i,])
         input_vec = select_descriptors_data(vec_every)
 
         for a in input_vec:
