@@ -41,12 +41,12 @@ def traindata_prepare(lst):
         
         mut_name = i.replace("\n", "").split(",")[0]
         ddg = i.replace("\n", "").split(",")[1]
-        se = i.replace("\n", "").split(",")[2]
 
         with open(os.path.join("Descriptors", "input_vectors_" + mut_name + ".pkl"), "rb") as f:
             graphs_dict, labels = pickle.load(f)
 
         if noise:
+            se = i.replace("\n", "").split(",")[2]
             labels = np.random.normal(loc=ddg, scale=se, size=len(labels))
         else:
             labels = np.array([ddg] * len(labels))
