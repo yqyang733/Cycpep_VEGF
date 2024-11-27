@@ -137,7 +137,7 @@ def predict(model):
 
     all_lst = get_lst(predictlist)
 
-    GB_model_predict(all_lst, model)
+    GB_model_predict(model, all_lst)
 
 def run():
     

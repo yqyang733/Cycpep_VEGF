@@ -47,14 +47,18 @@ def traindata_prepare(lst):
 
         if noise:
             se = i.replace("\n", "").split(",")[2]
-            labels = np.random.normal(loc=ddg, scale=se, size=len(labels))
+            labels_norm = np.random.normal(loc=ddg, scale=se, size=len(labels))
+            for a in range(len(labels)):
+                labels[list(labels.keys())[a]] = labels_norm[a]
         else:
-            labels = np.array([ddg] * len(labels))
+            labels_dup = np.array([ddg] * len(labels), dtype=np.float64)
+            for a in range(len(labels)):
+                labels[list(labels.keys())[a]] = labels_dup[a]
 
         groups = split_into_groups(list(graphs_dict.keys()), int(len(list(graphs_dict.keys()))/channels))
 
         for b in groups:
-            frame_names = "/".join(b)
+            frame_names = ":".join(b)
             graph = []
             label = []
             for a in b:
@@ -150,7 +154,7 @@ def GB_model_train(lst):
 
     return rf, input_vec
 
-def GB_model_predict(lst, model):
+def GB_model_predict(model, lst):
 
     predict_rt = open(os.path.join("results", "all_individal_pre.csv"), "w")
     predict_rt.write("mut,mean_pred,se_pred\n")
@@ -182,11 +186,11 @@ def GB_model_predict(lst, model):
 
         for i in range(len(predict_names)):
             predict_confs_rt.write(predict_names[i]+","+str(pred_predict[i])+"\n")
-        predict_confs_rt.close()
-        
+    
+    predict_confs_rt.close()    
     predict_rt.close()
 
-def GB_model_pretraindata(lst, model):
+def GB_model_pretraindata(model, lst):
 
     predict_trainconfs_rt = open(os.path.join("results", "all_trainconfs_prelab.csv"), "w")
     predict_trainconfs_rt.write("mut,value_label,value_pre\n")
