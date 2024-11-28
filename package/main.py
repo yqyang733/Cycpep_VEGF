@@ -5,7 +5,7 @@ import pickle
 from config import Config
 from GetDescriptors import get_single_snapshot, read_complexes, remove_files, get_all_features
 from GetFeatureMatrix import get_input
-from TrainAndPredict import GB_model_train, GB_model_predict, GB_model_pretraindata
+from TrainAndPredict import GB_params_adjust, GB_data_load, GB_model_train, GB_model_predict, GB_model_pretraindata
 
 trajpath             =       Config().trajpath
 refstructure         =       Config().refstructure
@@ -19,6 +19,10 @@ trainlist            =       Config().trainlist
 predictlist          =       Config().predictlist
 pickdescriptorsways  =       Config().pickdescriptorsways
 descriptornums       =       Config().descriptornums
+n_estimators         =       Config().n_estimators
+max_depth            =       Config().max_depth
+learning_rate        =       Config().learning_rate
+subsample            =       Config().subsample
 
 def mk_files():
 
@@ -123,21 +127,24 @@ def get_feature_matrix():
     all_lst += get_lst(predictlist)
     get_input(all_lst)
 
-def train():
+def train_and_predict():
 
-    all_lst = get_lst(trainlist)
+    train_lst = get_lst(trainlist)
+    predict_lst = get_lst(predictlist)
 
-    model, input_vec = GB_model_train(all_lst)
+    input_vec, train_names, train_feature, train_labels = GB_data_load(train_lst)
+    params = GB_params_adjust(n_estimators, max_depth, learning_rate, subsample)
 
-    GB_model_pretraindata(model, input_vec)
+    for i in params:
+        
+        n_es = i[0]
+        max_dep = i[1]
+        lr = i[2]
+        sample = i[3]
 
-    return model
-
-def predict(model):
-
-    all_lst = get_lst(predictlist)
-
-    GB_model_predict(model, all_lst)
+        model = GB_model_train(train_feature, train_labels, n_es, max_dep, lr, sample)
+        GB_model_pretraindata(model, input_vec, n_es, max_dep, lr, sample)
+        GB_model_predict(model, predict_lst, n_es, max_dep, lr, sample)
 
 def run():
     
@@ -148,8 +155,8 @@ def run():
     # get_every_descriptor("predict")
     # get_all_descriptor()
     # get_feature_matrix()
-    model = train()
-    predict(model)
+
+    train_and_predict()
         
     end = time.time()
     runtime_h = (end - start) / 3600

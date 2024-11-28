@@ -2,6 +2,7 @@ import os
 import pickle
 import random
 import torch 
+import shutil
 import numpy as np
 
 from config import Config
@@ -12,14 +13,18 @@ from model.Transformer import TransformerNet
 
 pickdescriptorsways  =       Config().pickdescriptorsways
 descriptornums       =       Config().descriptornums
-n_estimators         =       Config().n_estimators
-max_depth            =       Config().max_depth
-learning_rate        =       Config().learning_rate
-subsample            =       Config().subsample
 mlp_n_hidden         =       Config().n_hidden
 epoch                =       Config().epoch
 channels             =       Config().channels
 noise                =       Config().noise
+
+def mk_files(fle):
+
+    if not os.path.exists(fle):
+        os.makedirs(fle)
+    else:
+        shutil.rmtree(fle)
+        os.makedirs(fle)
 
 def split_into_groups(data, group_size):
     """
@@ -125,9 +130,23 @@ def select_descriptors_data(lst):
 
     return input_vec
 
-def GB_model_train(lst):
+def GB_params_adjust(n_es, max_dep, lr, sample):
 
-    clf = GradientBoosting(n_estimators = n_estimators, max_depth = max_depth, learning_rate = learning_rate, subsample = subsample).build()
+    all_params = []
+    n_es = n_es.split(":")
+    max_dep = max_dep.split(":")
+    lr = lr.split(":")
+    sample = sample.split(":")
+
+    for a in n_es:
+        for b in max_dep:
+            for c in lr:
+                for d in sample:
+                    all_params.append([int(a),int(b),float(c),float(d)])
+
+    return all_params
+
+def GB_data_load(lst):
 
     train_names = []
     train_feature = []
@@ -150,16 +169,23 @@ def GB_model_train(lst):
     train_feature = np.array([np.concatenate(sub_array).tolist() for sub_array in train_feature])  # 如果多个channel将多个channel的feature数组根据channel数目依次拼接。一个channel的所有feature接着下一个channel的所有feature。
     # train_feature = np.array([np.array(sub_array).T.flatten().tolist() for sub_array in train_feature])   # 如果多个channel将多个channel的fenture数组根据feature的次序进行拼接。第一个feature的所有channel接着下一个feature的所有channel。
 
-    # print("train_feature", train_feature)
+    return input_vec, train_names, train_feature, train_labels
+
+def GB_model_train(train_feature, train_labels, n_es, max_dep, lr, sample):
+
+    clf = GradientBoosting(n_estimators = n_es, max_depth = max_dep, learning_rate = lr, subsample = sample).build()
+
     rf = clf.fit(train_feature, train_labels)
 
-    return rf, input_vec
+    return rf
 
-def GB_model_predict(model, lst):
+def GB_model_predict(model, lst, n_es, max_dep, lr, sample):
 
-    predict_rt = open(os.path.join("results", "all_individal_pre.csv"), "w")
+    f_name = str(n_es) + "_" + str(max_dep) + "_" + str(lr) + "_" + str(sample)
+
+    predict_rt = open(os.path.join("results", f_name, "all_individal_pre.csv"), "w")
     predict_rt.write("mut,mean_pred,se_pred\n")
-    predict_confs_rt = open(os.path.join("results", "all_confs_pre.csv"), "w")
+    predict_confs_rt = open(os.path.join("results", f_name, "all_confs_pre.csv"), "w")
     predict_confs_rt.write("mut,value_pre\n")
 
     for i in lst:
@@ -191,9 +217,13 @@ def GB_model_predict(model, lst):
     predict_confs_rt.close()    
     predict_rt.close()
 
-def GB_model_pretraindata(model, lst):
+def GB_model_pretraindata(model, lst, n_es, max_dep, lr, sample):
 
-    predict_trainconfs_rt = open(os.path.join("results", "all_trainconfs_prelab.csv"), "w")
+    f_name = str(n_es) + "_" + str(max_dep) + "_" + str(lr) + "_" + str(sample)
+
+    mk_files(os.path.join("results", f_name))
+
+    predict_trainconfs_rt = open(os.path.join("results", f_name, "all_trainconfs_prelab.csv"), "w")
     predict_trainconfs_rt.write("mut,value_label,value_pre\n")
 
     predict_trainnames = []
