@@ -29,6 +29,7 @@ class Config():
         self.n_estimators = 100
         self.max_depth = 3
         self.learning_rate = 0.05
+        self.subsample = 0.8
 
         # add noise or not
         self.noise = False

@@ -15,6 +15,7 @@ descriptornums       =       Config().descriptornums
 n_estimators         =       Config().n_estimators
 max_depth            =       Config().max_depth
 learning_rate        =       Config().learning_rate
+subsample            =       Config().subsample
 mlp_n_hidden         =       Config().n_hidden
 epoch                =       Config().epoch
 channels             =       Config().channels
@@ -126,7 +127,7 @@ def select_descriptors_data(lst):
 
 def GB_model_train(lst):
 
-    clf = GradientBoosting(n_estimators = n_estimators, max_depth = max_depth, learning_rate = learning_rate).build()
+    clf = GradientBoosting(n_estimators = n_estimators, max_depth = max_depth, learning_rate = learning_rate, subsample = subsample).build()
 
     train_names = []
     train_feature = []
