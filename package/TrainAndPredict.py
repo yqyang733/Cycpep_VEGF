@@ -52,8 +52,9 @@ def traindata_prepare(lst):
             graphs_dict, labels = pickle.load(f)
 
         if noise:
-            se = i.replace("\n", "").split(",")[2]
-            labels_norm = np.random.normal(loc=ddg, scale=se, size=len(labels))
+            se = float(i.replace("\n", "").split(",")[2])
+            print("se", se)
+            labels_norm = np.random.normal(loc=float(ddg), scale=se, size=len(labels))
             for a in range(len(labels)):
                 labels[list(labels.keys())[a]] = labels_norm[a]
         else:
