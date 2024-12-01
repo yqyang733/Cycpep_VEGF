@@ -55,7 +55,7 @@ def get_every_descriptor(i):
         all_features = get_all_features(graphs_dict)
         data = make_data(graphs_dict, all_features)
 
-        with open(os.path.join("Descriptors", "input_vectors_" + i + ".pkl"), "wb") as f:
+        with open(os.path.join("Descriptors", "input_vectors_" + i.split(",")[0] + ".pkl"), "wb") as f:
             pickle.dump((all_features, data), f) 
 
         remove_files(des_path)

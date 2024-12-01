@@ -92,7 +92,7 @@ class Pdb(object):
 
 def split_pdb(pdb, partA, partB, des_path):
 
-    with open(pdb) as f:
+    with open(os.path.join(des_path, pdb)) as f:
         f1 = f.readlines()
 
     MUT = open(os.path.join(des_path, str(pdb).replace(".pdb", "_l.pdb")), "w")
@@ -142,12 +142,12 @@ def get_single_snapshot(work_path, mut, refname, trajname, startframe, endframe,
     shutil.copy(os.path.join(work_path, mut, trajname), os.path.join(des_path, trajname))
     print(os.path.join(work_path, mut, trajname))
 
-    cmd.load(os.path.join(des_path, refname, "structure"))
+    cmd.load(os.path.join(des_path, refname), "structure")
     cmd.load_traj(os.path.join(des_path, trajname))
     
     for i in range(startframe, endframe, step):
         cmd.save(os.path.join(des_path, "{0}_{1}.pdb".format(mut, str(i))), state = i)
-        split_pdb(os.path.join(des_path, "{0}_{1}.pdb".format(mut, str(i))), partA, partB, des_path)
+        split_pdb("{0}_{1}.pdb".format(mut, str(i)), partA, partB, des_path)
 
     cmd.delete("all")
 
