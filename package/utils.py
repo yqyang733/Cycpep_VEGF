@@ -1,3 +1,4 @@
+import os
 import sys
 import numpy as np
 
@@ -98,10 +99,42 @@ def plot_traindata_predictdata_scatter(f_input):
 
     fig.savefig('Figure.pdf')
 
+def remove_traj_water_ions(i):
+
+    tcl = open(os.path.join(i, "tcl"), "w")
+    tcl.write("""mol new complex.psf waitfor all
+mol addfile com-prodstep.dcd waitfor all
+
+set sel_save [atomselect top "not (resname TIP3 or resname SOD or resname CLA)"]
+
+$sel_save writepsf complex.psf
+
+animate write dcd com-prodstep.dcd sel $sel_save beg 0 end 999 skip 1 0
+
+quit
+""")
+    tcl.close()
+    command = "/public/home/yqyang/software/vmd1.9.3-install/bin/vmd -dispdev text -e tcl"
+    os.chdir(i)
+    os.system(command)
+    os.remove("tcl")
+    os.chdir("..")
+
 def main():
+
+    from concurrent.futures import ProcessPoolExecutor
+
     file = str(sys.argv[1])
     # plot_traindata_predictdata_scatter(file)
-    PCC_calculation(file)
+    # PCC_calculation(file)
+    with open(file) as f:
+        f1 = f.readlines()
+
+    all_lst = [i.replace("\n", "") for i in f1]
+
+    with ProcessPoolExecutor(max_workers=int(25)) as executor:
+        executor.map(remove_traj_water_ions, all_lst)
+
     
 if __name__=="__main__":
     main() 

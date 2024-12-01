@@ -466,7 +466,7 @@ def make_bond_dict(ligand_bonds, protein_bonds):
 
 def remove_files(des_path):
 
-    os.removedirs(des_path)
+    shutil.rmtree(des_path)
 
 def get_all_features(graphs_dict):
 
