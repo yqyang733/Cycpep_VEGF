@@ -39,22 +39,32 @@ def split_into_groups(data, group_size):
     """
     return [[data[i] for i in range(j, len(data), group_size)] for j in range(group_size)]
 
-def reorganize_array(data, headers, all_headers):
+# 函数：根据新标题集重新排列数组
+def reorganize_array(array, titles, all_titles):
 
-    """
-    定义一个函数，重组数组并补充不存在的列
-    """
+    # 创建标题到索引的映射
+    title_to_index = {title: idx for idx, title in enumerate(all_titles)}
+
+    # 创建一个新的数组，初始为0
+    new_shape = (array.shape[0], array.shape[1], len(all_titles))  # 新的列数
+    new_array = np.zeros(new_shape)
     
-    header_map = {header: i for i, header in enumerate(headers)}
-    new_array = np.zeros((data.shape[0], len(all_headers)))
-    for i, header in enumerate(all_headers):
-        if header in header_map:
-            new_array[:, i] = data[:, header_map[header]]
+    # 遍历原数组标题，填充到新数组中
+    for col_idx, title in enumerate(titles):
+        if title in title_to_index:
+            new_idx = title_to_index[title]  # 新标题的索引
+            # 确保不会访问超出范围的索引
+            # if new_idx < new_array.shape[2]:  # 确保新的索引在新数组范围内
+            print("new_idx", new_idx)
+            print("col_idx", col_idx)
+            new_array[:, :, new_idx] = array[:, :, col_idx]  # 将数据放入新位置
+    
     return new_array
 
 def traindata_prepare(lst):
 
     all_vec_everymut = []
+    all_titles = np.array([])
 
     for i in lst:
         
@@ -64,6 +74,8 @@ def traindata_prepare(lst):
 
         with open(os.path.join("Descriptors", "input_vectors_" + mut_name + ".pkl"), "rb") as f:
             all_features, graphs_dict = pickle.load(f)
+
+        all_titles = np.concatenate((all_titles, all_features), axis=0)
 
         if noise:
             se = float(i.replace("\n", "").split(",")[2])
@@ -94,9 +106,13 @@ def traindata_prepare(lst):
         
         all_vec_everymut.append([names, all_features, graphs, label_indivial])
 
+    all_titles = set(all_titles)
     all_vec_lst = []
+
     for names, all_features, graphs, label_indivial in all_vec_everymut:
-        
+        graphs = reorganize_array(graphs, all_features, all_titles)
+        for bb in range(len(names)):
+            all_vec_lst.append([names[bb], graphs[bb], label_indivial[bb]])
     
     return all_vec_lst
 
@@ -128,8 +144,14 @@ def select_descriptors_data(lst):
     input_vec = []
 
     if pickdescriptorsways == "frequency":
+        all_vec = np.array([row[1] for row in lst])
+        all_vec = all_vec.reshape(-1, all_vec.shape[-1])
+        stds = np.sum(all_vec, axis=0)
+        sorted_indices = np.argsort(stds)[::-1]
+
         if descriptornums == -1:
-            input_vec = lst
+            for i in lst:
+                input_vec.append(i[0], np.array(i[1])[:sorted_indices], i[2])
         else:
             for i in lst:
                 input_vec.append([i[0], np.array(i[1])[:range(descriptornums)], i[2]])
@@ -177,9 +199,7 @@ def GB_data_load(lst):
     train_labels = []
     
     all_vec_lst = traindata_prepare(lst)
-    # print("all_vec_lst", all_vec_lst)
     input_vec = select_descriptors_data(all_vec_lst)
-    # print("input_vec", input_vec)
     random.shuffle(input_vec)
 
     for a in input_vec:

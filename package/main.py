@@ -1,6 +1,7 @@
 import os
 import time
 import pickle
+from concurrent.futures import ProcessPoolExecutor
 
 from config import Config
 from GetDescriptors import get_single_snapshot, read_complexes, remove_files, get_all_features, make_data
@@ -22,6 +23,7 @@ n_estimators         =       Config().n_estimators
 max_depth            =       Config().max_depth
 learning_rate        =       Config().learning_rate
 subsample            =       Config().subsample
+cpus                 =       Config().cpus
 
 def mk_files():
 
@@ -43,35 +45,20 @@ def get_lst(in_file):
 
     return all_lst
 
-def get_every_descriptor(mode):
+def get_every_descriptor(i):
     
-    if mode == "train":
-        
-        all_lst = get_lst(trainlist)
-    
-    elif mode == "predict":
+    if os.path.exists(os.path.join("Descriptors", "input_vectors_" + i.split(",")[0] + ".pkl")):
+        pass
+    else:
+        protein_list, ligand_list, des_path = get_single_snapshot(trajpath, i.split(",")[0], refstructure, traj, startframe, endframe, step, partA, partB)           
+        graphs_dict = read_complexes(protein_list, ligand_list, des_path)
+        all_features = get_all_features(graphs_dict)
+        data = make_data(graphs_dict, all_features)
 
-        all_lst = get_lst(predictlist)
+        with open(os.path.join("Descriptors", "input_vectors_" + i + ".pkl"), "wb") as f:
+            pickle.dump((all_features, data), f) 
 
-    for i in all_lst:
-        
-        if mode == "train":
-
-            if os.path.exists(os.path.join("Descriptors", "input_vectors_" + i.split(",")[0] + ".pkl")):
-
-                continue
-
-            else:
-
-                protein_list, ligand_list = get_single_snapshot(trajpath, i.split(",")[0], refstructure, traj, startframe, endframe, step, partA, partB)           
-                graphs_dict = read_complexes(protein_list, ligand_list)
-                all_features = get_all_features(graphs_dict)
-                data = make_data(graphs_dict, all_features)
-
-                with open(os.path.join("Descriptors", "input_vectors_" + i + ".pkl"), "wb") as f:
-                    pickle.dump((all_features, data), f) 
-
-                remove_files(i.split(",")[0], refstructure, traj, startframe, endframe, step)
+        remove_files(des_path)
 
 def train_and_predict():
 
@@ -97,9 +84,16 @@ def run():
     start = time.time()
 
     mk_files()
-    get_every_descriptor("train")
-    get_every_descriptor("predict")
-    train_and_predict()
+        
+    train_lst = get_lst(trainlist)
+    with ProcessPoolExecutor(max_workers=int(cpus)) as executor:
+        executor.map(get_every_descriptor, train_lst)
+
+    # predict_lst = get_lst(predictlist)
+    # with ProcessPoolExecutor(max_workers=int(cpus)) as executor:
+    #     executor.map(get_every_descriptor, predict_lst)
+
+    # train_and_predict()
         
     end = time.time()
     runtime_h = (end - start) / 3600

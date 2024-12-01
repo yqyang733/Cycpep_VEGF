@@ -2,7 +2,6 @@ import os
 import math
 import pybel
 import shutil
-import pickle
 import numpy as np
 from pymol import cmd
 from collections import defaultdict
@@ -10,6 +9,14 @@ from config import Config
 
 get_des              =       Config().get_des
 rank                 =       Config().rank
+
+def mk_files(fle):
+
+    if not os.path.exists(fle):
+        os.makedirs(fle)
+    else:
+        shutil.rmtree(fle)
+        os.makedirs(fle)
 
 def get_residue_reference():
     return {'LEU', 'MET', 'ILE', 'GLU', 'CYS', 'GLY', 'PHE', 'ASN', 'GLN', 'LYS', 'TYR', 'ARG', 'THR', 'PRO', 'VAL', 'ASP', 'ALA', 'TRP', 'HIS', 'SER', 'NLE', 'HSD', 'HSE', 'HSP'}        
@@ -83,13 +90,13 @@ class Pdb(object):
                 out.append(row)
             return out
 
-def split_pdb(pdb, partA, partB):
+def split_pdb(pdb, partA, partB, des_path):
 
     with open(pdb) as f:
         f1 = f.readlines()
 
-    MUT = open(str(pdb).replace(".pdb", "_l.pdb"), "w")
-    PRO = open(str(pdb).replace(".pdb", "_r.pdb"), "w")
+    MUT = open(os.path.join(des_path, str(pdb).replace(".pdb", "_l.pdb")), "w")
+    PRO = open(os.path.join(des_path, str(pdb).replace(".pdb", "_r.pdb")), "w")
 
     for i in f1:
         if i.startswith("ATOM"):
@@ -101,24 +108,24 @@ def split_pdb(pdb, partA, partB):
     MUT.close()
     PRO.close()
 
-    pdb1 = Pdb(str(pdb).replace(".pdb", "_r.pdb"))
+    pdb1 = Pdb(os.path.join(des_path, str(pdb).replace(".pdb", "_r.pdb")))
     pdb1.cont = pdb1.renumber_residues(start=1, reset=False)
-    PRO = open(str(pdb).replace(".pdb", "_r_renum.pdb"), "w")
+    PRO = open(os.path.join(des_path, str(pdb).replace(".pdb", "_r_renum.pdb")), "w")
     PRO.write("\n".join(pdb1.cont))
     PRO.close()
 
-    pdb1 = Pdb(str(pdb).replace(".pdb", "_l.pdb"))
+    pdb1 = Pdb(os.path.join(des_path, str(pdb).replace(".pdb", "_l.pdb")))
     pdb1.cont = pdb1.renumber_residues(start=1, reset=False)
-    MUT = open(str(pdb).replace(".pdb", "_l_renum.pdb"), "w")
+    MUT = open(os.path.join(des_path, str(pdb).replace(".pdb", "_l_renum.pdb")), "w")
     MUT.write("\n".join(pdb1.cont))
     MUT.close()
             
-    mol = next(pybel.readfile("pdb", str(pdb).replace(".pdb", "_r_renum.pdb")))
-    output = pybel.Outputfile("mol2", str(pdb).replace(".pdb", "_r.mol2"), overwrite=True)
+    mol = next(pybel.readfile("pdb", os.path.join(des_path, str(pdb).replace(".pdb", "_r_renum.pdb"))))
+    output = pybel.Outputfile("mol2", os.path.join(des_path, str(pdb).replace(".pdb", "_r.mol2")), overwrite=True)
     output.write(mol)
     output.close()
-    mol = next(pybel.readfile("pdb", str(pdb).replace(".pdb", "_l_renum.pdb")))
-    output = pybel.Outputfile("mol2", str(pdb).replace(".pdb", "_l.mol2"), overwrite=True)
+    mol = next(pybel.readfile("pdb", os.path.join(des_path, str(pdb).replace(".pdb", "_l_renum.pdb"))))
+    output = pybel.Outputfile("mol2", os.path.join(des_path, str(pdb).replace(".pdb", "_l.mol2")), overwrite=True)
     output.write(mol)
     output.close()
 
@@ -128,16 +135,19 @@ def get_single_snapshot(work_path, mut, refname, trajname, startframe, endframe,
     Split the molecular dynamics trajectory file into individual PDB structure files, one frame per file.
     '''
 
-    shutil.copy(os.path.join(work_path, mut, refname), refname)
-    shutil.copy(os.path.join(work_path, mut, trajname), trajname)
+    des_path = os.path.join("Descriptors", mut)
+    mk_files(des_path)
+
+    shutil.copy(os.path.join(work_path, mut, refname), os.path.join(des_path, refname))
+    shutil.copy(os.path.join(work_path, mut, trajname), os.path.join(des_path, trajname))
     print(os.path.join(work_path, mut, trajname))
 
-    cmd.load(refname, "structure")
-    cmd.load_traj(trajname)
+    cmd.load(os.path.join(des_path, refname, "structure"))
+    cmd.load_traj(os.path.join(des_path, trajname))
     
     for i in range(startframe, endframe, step):
-        cmd.save("{0}_{1}.pdb".format(mut, str(i)), state = i)
-        split_pdb("{0}_{1}.pdb".format(mut, str(i)), partA, partB)
+        cmd.save(os.path.join(des_path, "{0}_{1}.pdb".format(mut, str(i))), state = i)
+        split_pdb(os.path.join(des_path, "{0}_{1}.pdb".format(mut, str(i))), partA, partB, des_path)
 
     cmd.delete("all")
 
@@ -147,9 +157,9 @@ def get_single_snapshot(work_path, mut, refname, trajname, startframe, endframe,
     l_lst = ["{0}_{1}_l.mol2".format(mut, str(i)) for i in range(startframe, endframe, step)]
     # label = [mean for i in range(startframe, endframe, step)]
 
-    return r_lst, l_lst
+    return r_lst, l_lst, des_path
 
-def read_complexes(protein_list, ligand_list):
+def read_complexes(protein_list, ligand_list, des_path):
     
     # data, labels = dict(), dict()
     data = dict()
@@ -162,9 +172,12 @@ def read_complexes(protein_list, ligand_list):
         protein atoms coords : The coordinates of each atom.
         protein bonds : Store each atom's bond in an undirected graph((start, end),(start, end)).        
         '''
-        ligand_atoms_type, ligand_atoms_type_index_dict, ligand_atoms_coords, ligand_bonds = read_protein_file((open(l_file, "r")).readlines())
+
+        p_file
+
+        ligand_atoms_type, ligand_atoms_type_index_dict, ligand_atoms_coords, ligand_bonds = read_protein_file((open(os.path.join(des_path, l_file), "r")).readlines())
         
-        protein_atoms_type, protein_atoms_type_index_dict, protein_atoms_coords, protein_bonds = read_protein_file((open(p_file, "r")).readlines())
+        protein_atoms_type, protein_atoms_type_index_dict, protein_atoms_coords, protein_bonds = read_protein_file((open(os.path.join(des_path, p_file), "r")).readlines())
 
         '''
         Find all cases where the distance between the ligand and the protein atom is less than a certain threshold.
@@ -451,18 +464,9 @@ def make_bond_dict(ligand_bonds, protein_bonds):
             
     return ligand_start_end, protein_start_end
 
-def remove_files(mut, refname, trajname, startframe, endframe, step):
+def remove_files(des_path):
 
-    os.remove(refname)
-    os.remove(trajname)
-    for i in range(startframe, endframe, step):
-        os.remove("{0}_{1}.pdb".format(mut, str(i)))
-        os.remove("{0}_{1}_r.pdb".format(mut, str(i)))
-        os.remove("{0}_{1}_r_renum.pdb".format(mut, str(i)))
-        os.remove("{0}_{1}_r.mol2".format(mut, str(i)))
-        os.remove("{0}_{1}_l.pdb".format(mut, str(i)))
-        os.remove("{0}_{1}_l_renum.pdb".format(mut, str(i)))
-        os.remove("{0}_{1}_l.mol2".format(mut, str(i)))
+    os.removedirs(des_path)
 
 def get_all_features(graphs_dict):
 
