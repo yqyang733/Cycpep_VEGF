@@ -122,7 +122,7 @@ def split_pdb(pdb, partA, partB):
     output.write(mol)
     output.close()
 
-def get_single_snapshot(work_path, mut, val, refname, trajname, startframe, endframe, step, partA, partB):
+def get_single_snapshot(work_path, mut, refname, trajname, startframe, endframe, step, partA, partB):
 
     '''
     Split the molecular dynamics trajectory file into individual PDB structure files, one frame per file.
@@ -141,17 +141,18 @@ def get_single_snapshot(work_path, mut, val, refname, trajname, startframe, endf
 
     cmd.delete("all")
 
-    mean = float(val)
+    # mean = float(val)
 
     r_lst = ["{0}_{1}_r.mol2".format(mut, str(i)) for i in range(startframe, endframe, step)]
     l_lst = ["{0}_{1}_l.mol2".format(mut, str(i)) for i in range(startframe, endframe, step)]
-    label = [mean for i in range(startframe, endframe, step)]
+    # label = [mean for i in range(startframe, endframe, step)]
 
-    return r_lst, l_lst, label
+    return r_lst, l_lst
 
-def read_complexes(protein_list, ligand_list, labels_list):
+def read_complexes(protein_list, ligand_list):
     
-    data, labels = dict(), dict()
+    # data, labels = dict(), dict()
+    data = dict()
     
     for idx, (p_file, l_file) in enumerate(zip(protein_list, ligand_list)):
         
@@ -183,9 +184,9 @@ def read_complexes(protein_list, ligand_list, labels_list):
         name = protein_name + "/" + ligand_name
         
         data[name] = graphs
-        labels[name] = labels_list[idx]
+        # labels[name] = labels_list[idx]
         
-    return data, labels
+    return data
 
 def read_protein_file(lines):
     
@@ -463,43 +464,51 @@ def remove_files(mut, refname, trajname, startframe, endframe, step):
         os.remove("{0}_{1}_l_renum.pdb".format(mut, str(i)))
         os.remove("{0}_{1}_l.mol2".format(mut, str(i)))
 
-def get_all_features(lst):
+def get_all_features(graphs_dict):
 
     all_features = dict()
-
-    for i in lst:
         
-        with open(os.path.join("Descriptors", "Descriptors_" + i + ".pkl"), "rb") as f:
-            descriptors = pickle.load(f)
+    for j in graphs_dict.keys():
+        for z in graphs_dict[j].keys():
+            for x in graphs_dict[j][z]:
+                tmp = list()
+                for y in x.keys():
+                    tmp.append((y, x[y]))
+                tmp = tuple(sorted(tmp))
+                if tmp in all_features:
+                    all_features[tmp] += 1
+                else:
+                    all_features[tmp] = 1
+    
+    all_features = np.array(list(all_features.keys()),dtype=object)
+
+    return all_features
+
+def make_data(graphs_dict, all_features):    
+     
+    data = dict()
+    
+    ''' For each complex '''
+    for name in graphs_dict.keys():
+        whole_descriptors = dict()
         
-        for j in descriptors[0].keys():
-            for z in descriptors[0][j].keys():
-                for x in descriptors[0][j][z]:
-                    tmp = list()
-                    for y in x.keys():
-                        tmp.append((y, x[y]))
-                    tmp = tuple(sorted(tmp))
-                    if tmp in all_features:
-                        all_features[tmp] += 1
-                    else:
-                        all_features[tmp] = 1
-    
-    feature_sorted = sorted(zip(all_features.values(), all_features.keys()), reverse=True)
-    
-    all_fea_sort = dict()
-    for i in feature_sorted:
-        all_fea_sort[i[1]] = i[0]
-
-    with open(os.path.join("Descriptors", "Descriptors_frequency.pkl"), "wb") as f:
-        pickle.dump(all_fea_sort, f)
-    f.close() 
-
-    fea_all = list()
-    for i in range(len(feature_sorted)):
-        fea_all.append(feature_sorted[i][1])
-
-    fea_all = np.array(fea_all, dtype=object)
-    
-    with open(os.path.join("Descriptors", "Descriptors_all.pkl"), "wb") as f:
-        pickle.dump(fea_all, f)
-    f.close()
+        for type in graphs_dict[name].keys():
+            
+            ''' 
+            one descriptor check  
+            e.g. (16, 16):[{(1, 16, 6, '1'): 2, (0, 16, 6, '1'): 1}, ...]    
+            '''
+            for descriptor in graphs_dict[name][type]:
+                if tuple(sorted(descriptor.items())) in whole_descriptors:
+                    whole_descriptors[tuple(sorted(descriptor.items()))] += 1
+                else:
+                    whole_descriptors[tuple(sorted(descriptor.items()))] = 1  
+        
+        ''' Create a row vector for each complex. '''
+        row_vetor = list()
+        for selected_descriptor in  all_features:
+            row_vetor.append(whole_descriptors[selected_descriptor]) if selected_descriptor in whole_descriptors else row_vetor.append(0)
+                
+        data[name] = np.array(row_vetor, dtype = np.float32)    
+        
+    return data

@@ -3,8 +3,7 @@ import time
 import pickle
 
 from config import Config
-from GetDescriptors import get_single_snapshot, read_complexes, remove_files, get_all_features
-from GetFeatureMatrix import get_input
+from GetDescriptors import get_single_snapshot, read_complexes, remove_files, get_all_features, make_data
 from TrainAndPredict import GB_params_adjust, GB_data_load, GB_model_train, GB_model_predict, GB_model_pretraindata
 
 trajpath             =       Config().trajpath
@@ -58,74 +57,21 @@ def get_every_descriptor(mode):
         
         if mode == "train":
 
-            if os.path.exists(os.path.join("Descriptors", "Descriptors_" + i.split(",")[0] + ".pkl")):
+            if os.path.exists(os.path.join("Descriptors", "input_vectors_" + i.split(",")[0] + ".pkl")):
 
                 continue
-            
-            # elif os.path.exists(os.path.join("Descriptors", "predict_Descriptors_" + i.split(",")[0] + ".pkl")):
-
-            #     with open(os.path.join("Descriptors", "predict_Descriptors_" + i.split(",")[0] + ".pkl"), "rb") as f:                    
-            #         (graphs_dict, labels) = pickle.load(f)
-            #     for i in labels.keys():
-            #         labels[i] = float(i.split(",")[1])
-            #     with open(os.path.join("Descriptors", "Descriptors_" + i.split(",")[0] + ".pkl"), "wb") as f:
-            #         pickle.dump((graphs_dict, labels), f)
-            #     f.close() 
-
-            #     os.remove(os.path.join("Descriptors", "predict_Descriptors_" + i.split(",")[0] + ".pkl"))
-
-            #     continue
 
             else:
 
-                protein_list, ligand_list, labels_list = get_single_snapshot(trajpath, i.split(",")[0], float(i.split(",")[1]), refstructure, traj, startframe, endframe, step, partA, partB)
-            
-                graphs_dict, labels = read_complexes(protein_list, ligand_list, labels_list)
-            
-                with open(os.path.join("Descriptors", "Descriptors_" + i.split(",")[0] + ".pkl"), "wb") as f:
-                    pickle.dump((graphs_dict, labels), f)
+                protein_list, ligand_list = get_single_snapshot(trajpath, i.split(",")[0], refstructure, traj, startframe, endframe, step, partA, partB)           
+                graphs_dict = read_complexes(protein_list, ligand_list)
+                all_features = get_all_features(graphs_dict)
+                data = make_data(graphs_dict, all_features)
 
-        elif mode == "predict":
+                with open(os.path.join("Descriptors", "input_vectors_" + i + ".pkl"), "wb") as f:
+                    pickle.dump((all_features, data), f) 
 
-            if os.path.exists(os.path.join("Descriptors", "Descriptors_" + i.split(",")[0] + ".pkl")):
-
-                continue
-            
-        #     elif os.path.exists(os.path.join("Descriptors", "Descriptors_" + i.split(",")[0] + ".pkl")):
-
-        #         os.rename(os.path.join("Descriptors", "Descriptors_" + i.split(",")[0] + ".pkl"), os.path.join("Descriptors", "predict_Descriptors_" + i.split(",")[0] + ".pkl"))
-
-        #         continue
-
-            else:
-
-                protein_list, ligand_list, labels_list = get_single_snapshot(trajpath, i, 0, refstructure, traj, startframe, endframe, step, partA, partB)
-
-                graphs_dict, labels = read_complexes(protein_list, ligand_list, labels_list)
-                
-                with open(os.path.join("Descriptors", "Descriptors_" + i.split(",")[0] + ".pkl"), "wb") as f:
-                    pickle.dump((graphs_dict, labels), f) 
-
-        remove_files(i.split(",")[0], refstructure, traj, startframe, endframe, step)
-
-def get_all_descriptor():
-
-    with open(trainlist) as f:
-            f1 = f.readlines()
-    
-    train_lst = []
-    for i in f1:
-        line = i.strip().split(",")
-        train_lst.append(line[0])
-
-    get_all_features(train_lst)
-
-def get_feature_matrix():
-
-    all_lst = get_lst(trainlist)
-    all_lst = [i.split(",")[0] for i in all_lst]
-    all_lst += get_lst(predictlist)
-    get_input(all_lst)
+                remove_files(i.split(",")[0], refstructure, traj, startframe, endframe, step)
 
 def train_and_predict():
 
@@ -150,12 +96,9 @@ def run():
     
     start = time.time()
 
-    # mk_files()
-    # get_every_descriptor("train")
-    # get_every_descriptor("predict")
-    # get_all_descriptor()
-    # get_feature_matrix()
-
+    mk_files()
+    get_every_descriptor("train")
+    get_every_descriptor("predict")
     train_and_predict()
         
     end = time.time()

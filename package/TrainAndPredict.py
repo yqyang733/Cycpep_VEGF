@@ -39,41 +39,64 @@ def split_into_groups(data, group_size):
     """
     return [[data[i] for i in range(j, len(data), group_size)] for j in range(group_size)]
 
+def reorganize_array(data, headers, all_headers):
+
+    """
+    定义一个函数，重组数组并补充不存在的列
+    """
+    
+    header_map = {header: i for i, header in enumerate(headers)}
+    new_array = np.zeros((data.shape[0], len(all_headers)))
+    for i, header in enumerate(all_headers):
+        if header in header_map:
+            new_array[:, i] = data[:, header_map[header]]
+    return new_array
+
 def traindata_prepare(lst):
 
-    all_vec_lst = []
+    all_vec_everymut = []
 
     for i in lst:
         
         mut_name = i.replace("\n", "").split(",")[0]
         ddg = i.replace("\n", "").split(",")[1]
+        labels = dict()
 
         with open(os.path.join("Descriptors", "input_vectors_" + mut_name + ".pkl"), "rb") as f:
-            graphs_dict, labels = pickle.load(f)
+            all_features, graphs_dict = pickle.load(f)
 
         if noise:
             se = float(i.replace("\n", "").split(",")[2])
-            print("se", se)
             labels_norm = np.random.normal(loc=float(ddg), scale=se, size=len(labels))
-            for a in range(len(labels)):
-                labels[list(labels.keys())[a]] = labels_norm[a]
+            for a in range(len(graphs_dict)):
+                labels[list(graphs_dict.keys())[a]] = labels_norm[a]
         else:
             labels_dup = np.array([ddg] * len(labels), dtype=np.float64)
-            for a in range(len(labels)):
-                labels[list(labels.keys())[a]] = labels_dup[a]
+            for a in range(len(graphs_dict)):
+                labels[list(graphs_dict.keys())[a]] = labels_dup[a]
 
         groups = split_into_groups(list(graphs_dict.keys()), int(len(list(graphs_dict.keys()))/channels))
 
+        names = []
+        graphs = []
+        label_indivial = []
         for b in groups:
-            frame_names = ":".join(b)
+            names.append(":".join(b))
             graph = []
             label = []
             for a in b:
                 graph.append(graphs_dict[a])
                 label.append(labels[a])
             label_mean = np.mean(label)
+
+            graphs.append(graphs)
+            label_indivial.append(label_mean)
         
-            all_vec_lst.append([frame_names, graph, label_mean])
+        all_vec_everymut.append([names, all_features, graphs, label_indivial])
+
+    all_vec_lst = []
+    for names, all_features, graphs, label_indivial in all_vec_everymut:
+        
     
     return all_vec_lst
 
