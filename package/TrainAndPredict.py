@@ -117,7 +117,7 @@ def data_prepare(trainlst, predictlst):
             predict_all_vec_everymut.append([names, all_features, graphs, label_indivial])
 
     all_titles = set(all_titles)
-    print("len(all_titles)", len(all_titles))
+
     train_all_vec_lst = []
     predict_all_vec_lst = []
 
@@ -133,114 +133,7 @@ def data_prepare(trainlst, predictlst):
         for bb in range(len(names)):
             predict_all_vec_lst.append([names[bb], graphs[bb], label_indivial[bb]])
     
-    print("train_all_vec_lst[0]", train_all_vec_lst[0])
-    print("len(train_all_vec_lst)", len(train_all_vec_lst))
-    print("predict_all_vec_lst[0]", predict_all_vec_lst[0])
-    print("len(predict_all_vec_lst)", len(predict_all_vec_lst))
-    
     return train_all_vec_lst, predict_all_vec_lst
-
-def traindata_prepare(lst):
-
-    all_vec_everymut = []
-    all_titles = np.array([])
-
-    for i in lst:
-        
-        mut_name = i.replace("\n", "").split(",")[0]
-        ddg = i.replace("\n", "").split(",")[1]
-        labels = dict()
-
-        with open(os.path.join("Descriptors", "input_vectors_" + mut_name + ".pkl"), "rb") as f:
-            all_features, graphs_dict = pickle.load(f)
-
-        all_titles = np.concatenate((all_titles, all_features), axis=0)
-
-        if noise:
-            se = float(i.replace("\n", "").split(",")[2])
-            labels_norm = np.random.normal(loc=float(ddg), scale=se, size=len(graphs_dict))
-            for a in range(len(graphs_dict)):
-                labels[list(graphs_dict.keys())[a]] = labels_norm[a]
-        else:
-            labels_dup = np.array([ddg] * len(graphs_dict), dtype=np.float64)
-            for a in range(len(graphs_dict)):
-                labels[list(graphs_dict.keys())[a]] = labels_dup[a]
-
-        groups = split_into_groups(list(graphs_dict.keys()), int(len(list(graphs_dict.keys()))/channels))
-
-        names = []
-        graphs = []
-        label_indivial = []
-        for b in groups:
-            names.append(":".join(b))
-            graph = []
-            label = []
-            for a in b:
-                graph.append(graphs_dict[a])
-                label.append(labels[a])
-            label_mean = np.mean(label)
-
-            graphs.append(graph)
-            label_indivial.append(label_mean)
-        
-        all_vec_everymut.append([names, all_features, graphs, label_indivial])
-
-    all_titles = set(all_titles)
-    all_vec_lst = []
-
-    for names, all_features, graphs, label_indivial in all_vec_everymut:
-
-        graphs = reorganize_array(graphs, all_features, all_titles)
-        for bb in range(len(names)):
-            all_vec_lst.append([names[bb], graphs[bb], label_indivial[bb]])
-    
-    return all_vec_lst, all_titles
-
-def predictdata_prepare(lst, all_titles):
-
-    all_vec_everymut = []
-
-    for i in lst:
-        
-        mut_name = i.replace("\n", "").split(",")[0]
-        ddg = "0"
-        labels = dict()
-
-        with open(os.path.join("Descriptors", "input_vectors_" + mut_name + ".pkl"), "rb") as f:
-            all_features, graphs_dict = pickle.load(f)
-
-        labels_dup = np.array([ddg] * len(graphs_dict), dtype=np.float64)
-        for a in range(len(graphs_dict)):
-            labels[list(graphs_dict.keys())[a]] = labels_dup[a]
-
-        groups = split_into_groups(list(graphs_dict.keys()), int(len(list(graphs_dict.keys()))/channels))
-
-        names = []
-        graphs = []
-        label_indivial = []
-        for b in groups:
-            names.append(mut_name)
-            graph = []
-            label = []
-            for a in b:
-                graph.append(graphs_dict[a])
-                label.append(labels[a])
-            label_mean = np.mean(label)
-
-            graphs.append(graph)
-            label_indivial.append(label_mean)
-        
-        all_vec_everymut.append([names, all_features, graphs, label_indivial])
-
-    all_vec_lst = []
-
-    for names, all_features, graphs, label_indivial in all_vec_everymut:
-
-        graphs = reorganize_array(graphs, all_features, all_titles)
-        for bb in range(len(names)):
-            all_vec_lst.append([names[bb], graphs[bb], label_indivial[bb]])
-    
-    return all_vec_lst
 
 def select_descriptors_data(lst, indices, mode):
 
@@ -307,12 +200,8 @@ def GB_data_load(trainlst, predictlst):
     train_all_vec_lst, predict_all_vec_lst = data_prepare(trainlst, predictlst)
     train_input_vec, sorted_indices = select_descriptors_data(train_all_vec_lst, "_", "train")
     random.shuffle(train_input_vec)
-    print("train_input_vec[:5]", train_input_vec[:5])
-    print("len(train_input_vec)", len(train_input_vec))
 
     predict_input_vec, _ = select_descriptors_data(predict_all_vec_lst, sorted_indices, "predict")
-    print("predict_input_vec[:8]", predict_input_vec[:8])
-    print("len(predict_input_vec)", len(predict_input_vec))
 
     for a in train_input_vec:
         train_names.append(a[0])

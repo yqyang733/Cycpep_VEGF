@@ -13,7 +13,7 @@ class Config():
         self.get_des = "all"   # all or rank
         self.rank = 10
         self.channels = 1
-        self.cpus = 1
+        self.cpus = 25
 
         # data path
         self.trainlist = "trainlst.dat"
