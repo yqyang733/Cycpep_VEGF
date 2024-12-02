@@ -58,6 +58,88 @@ def reorganize_array(graphs, titles, all_titles):
     
     return new_array
 
+def data_prepare(trainlst, predictlst):
+
+    trainlst = [i.replace("\n", "")+",train" for i in trainlst]
+    predictlst = [i.replace("\n", "")+",0.01,0.01,predict" for i in predictlst]
+
+    train_all_vec_everymut = []
+    predict_all_vec_everymut = []
+    lst = trainlst + predictlst
+    all_titles = np.array([])
+
+    for i in lst:
+        
+        mut_name = i.split(",")[0]
+        ddg = i.split(",")[1]
+        labels = dict()
+        flag = i.split(",")[-1]
+
+        with open(os.path.join("Descriptors", "input_vectors_" + mut_name + ".pkl"), "rb") as f:
+            all_features, graphs_dict = pickle.load(f)
+
+        if flag == "train":
+            all_titles = np.concatenate((all_titles, all_features), axis=0)
+
+        if noise:
+            se = float(i.split(",")[2])
+            labels_norm = np.random.normal(loc=float(ddg), scale=se, size=len(graphs_dict))
+            for a in range(len(graphs_dict)):
+                labels[list(graphs_dict.keys())[a]] = labels_norm[a]
+        else:
+            labels_dup = np.array([ddg] * len(graphs_dict), dtype=np.float64)
+            for a in range(len(graphs_dict)):
+                labels[list(graphs_dict.keys())[a]] = labels_dup[a]
+
+        groups = split_into_groups(list(graphs_dict.keys()), int(len(list(graphs_dict.keys()))/channels))
+
+        names = []
+        graphs = []
+        label_indivial = []
+        for b in groups:
+            if flag == "train":
+                names.append(":".join(b))
+            elif flag == "predict":
+                names.append(mut_name)
+            graph = []
+            label = []
+            for a in b:
+                graph.append(graphs_dict[a])
+                label.append(labels[a])
+            label_mean = np.mean(label)
+
+            graphs.append(graph)
+            label_indivial.append(label_mean)
+
+        if flag == "train":
+            train_all_vec_everymut.append([names, all_features, graphs, label_indivial])
+        elif flag == "predict":
+            predict_all_vec_everymut.append([names, all_features, graphs, label_indivial])
+
+    all_titles = set(all_titles)
+    print("len(all_titles)", len(all_titles))
+    train_all_vec_lst = []
+    predict_all_vec_lst = []
+
+    for names, all_features, graphs, label_indivial in train_all_vec_everymut:
+
+        graphs = reorganize_array(graphs, all_features, all_titles)
+        for bb in range(len(names)):
+            train_all_vec_lst.append([names[bb], graphs[bb], label_indivial[bb]])
+
+    for names, all_features, graphs, label_indivial in predict_all_vec_everymut:
+
+        graphs = reorganize_array(graphs, all_features, all_titles)
+        for bb in range(len(names)):
+            predict_all_vec_lst.append([names[bb], graphs[bb], label_indivial[bb]])
+    
+    print("train_all_vec_lst[0]", train_all_vec_lst[0])
+    print("len(train_all_vec_lst)", len(train_all_vec_lst))
+    print("predict_all_vec_lst[0]", predict_all_vec_lst[0])
+    print("len(predict_all_vec_lst)", len(predict_all_vec_lst))
+    
+    return train_all_vec_lst, predict_all_vec_lst
+
 def traindata_prepare(lst):
 
     all_vec_everymut = []
@@ -160,15 +242,18 @@ def predictdata_prepare(lst, all_titles):
     
     return all_vec_lst
 
-def select_descriptors_data(lst):
+def select_descriptors_data(lst, indices, mode):
 
     input_vec = []
 
     if pickdescriptorsways == "frequency":
-        all_vec = np.array([row[1] for row in lst])
-        all_vec = all_vec.reshape(-1, all_vec.shape[-1])
-        fre = np.sum(all_vec, axis=0)
-        sorted_indices = np.argsort(fre)[::-1]
+        if mode == "train":
+            all_vec = np.array([row[1] for row in lst])
+            all_vec = all_vec.reshape(-1, all_vec.shape[-1])
+            fre = np.sum(all_vec, axis=0)
+            sorted_indices = np.argsort(fre)[::-1]
+        elif mode == "predict":
+            sorted_indices = indices
 
         if descriptornums == -1:
             for i in lst:
@@ -195,7 +280,7 @@ def select_descriptors_data(lst):
         for i in lst:
             input_vec.append([i[0], i[1][feature_select_idx], i[2]])
 
-    return input_vec
+    return input_vec, sorted_indices
 
 def GB_params_adjust(n_es, max_dep, lr, sample):
 
@@ -218,23 +303,23 @@ def GB_data_load(trainlst, predictlst):
     train_names = []
     train_feature = []
     train_labels = []
-
-    predict_names = []
-    predict_feature = []
     
-    train_all_vec_lst, all_titles = traindata_prepare(trainlst)
-    train_input_vec = select_descriptors_data(train_all_vec_lst)
+    train_all_vec_lst, predict_all_vec_lst = data_prepare(trainlst, predictlst)
+    train_input_vec, sorted_indices = select_descriptors_data(train_all_vec_lst, "_", "train")
     random.shuffle(train_input_vec)
+    print("train_input_vec[:5]", train_input_vec[:5])
+    print("len(train_input_vec)", len(train_input_vec))
 
-    predict_all_vec_lst = predictdata_prepare(predictlst, all_titles)
-    predict_input_vec = select_descriptors_data(predict_all_vec_lst)
+    predict_input_vec, _ = select_descriptors_data(predict_all_vec_lst, sorted_indices, "predict")
+    print("predict_input_vec[:8]", predict_input_vec[:8])
+    print("len(predict_input_vec)", len(predict_input_vec))
 
     for a in train_input_vec:
         train_names.append(a[0])
         train_feature.append(a[1])
         train_labels.append(a[2])
     
-    train_feature = np.array([np.concatenate(sub_array).tolist() for sub_array in train_feature])  # 如果多个channel将多个channel的feature数组根据channel数目依次拼接。一个channel的所有feature接着下一个channel的所有feature。
+    train_feature = np.array([np.concatenate(sub_array).tolist() for sub_array in train_feature], dtype="f")  # 如果多个channel将多个channel的feature数组根据channel数目依次拼接。一个channel的所有feature接着下一个channel的所有feature。
     # train_feature = np.array([np.array(sub_array).T.flatten().tolist() for sub_array in train_feature])   # 如果多个channel将多个channel的fenture数组根据feature的次序进行拼接。第一个feature的所有channel接着下一个feature的所有channel。
 
     return train_input_vec, train_names, train_feature, train_labels, predict_input_vec
@@ -261,7 +346,7 @@ def GB_model_predict(model, predict_input_vec, n_es, max_dep, lr, sample):
         predict_names.append(a[0])
         predict_feature.append(a[1])
 
-    predict_feature = np.array([np.concatenate(sub_array).tolist() for sub_array in predict_feature])  # 如果多个channel将多个channel的feature数组根据channel数目依次拼接。一个channel的所有feature接着下一个channel的所有feature。
+    predict_feature = np.array([np.concatenate(sub_array).tolist() for sub_array in predict_feature], dtype="f")  # 如果多个channel将多个channel的feature数组根据channel数目依次拼接。一个channel的所有feature接着下一个channel的所有feature。
     # predict_feature = np.array([np.array(sub_array).T.flatten().tolist() for sub_array in predict_feature])   # 如果多个channel将多个channel的fenture数组根据feature的次序进行拼接。第一个feature的所有channel接着下一个feature的所有channel。
 
     pred_predict = model.predict(predict_feature)
@@ -295,7 +380,7 @@ def GB_model_pretraindata(model, lst, n_es, max_dep, lr, sample):
         predict_trainfeature.append(a[1])
         predict_trainlabels.append(a[2])
 
-    predict_trainfeature = np.array([np.concatenate(sub_array).tolist() for sub_array in predict_trainfeature])  # 如果多个channel将多个channel的feature数组根据channel数目依次拼接。一个channel的所有feature接着下一个channel的所有feature。
+    predict_trainfeature = np.array([np.concatenate(sub_array).tolist() for sub_array in predict_trainfeature], dtype="f")  # 如果多个channel将多个channel的feature数组根据channel数目依次拼接。一个channel的所有feature接着下一个channel的所有feature。
     # predict_trainfeature = np.array([np.array(sub_array).T.flatten().tolist() for sub_array in predict_trainfeature])   # 如果多个channel将多个channel的fenture数组根据feature的次序进行拼接。第一个feature的所有channel接着下一个feature的所有channel。
 
     pred_trainpredict = model.predict(predict_trainfeature)
