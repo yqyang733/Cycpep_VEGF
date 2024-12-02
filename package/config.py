@@ -13,7 +13,7 @@ class Config():
         self.get_des = "all"   # all or rank
         self.rank = 10
         self.channels = 1
-        self.cpus = 120
+        self.cpus = 2
 
         # data path
         self.trainlist = "trainlst.dat"
@@ -27,9 +27,9 @@ class Config():
         self.model = "GradientBoostingRegressor"   # GradientBoostingRegressor or 
 
         # GradientBoosting
-        self.n_estimators = "10:50:100:500:1000:1500:2000:2500:3000"
-        self.max_depth = "1:3:5:7:9:15:20:25:30"
-        self.learning_rate = "0.01:0.05:0.1:0.15:0.2:0.25:0.3"
+        self.n_estimators = "10:100:1000"
+        self.max_depth = "3:6:9"
+        self.learning_rate = "0.05:0.1:0.3"
         self.subsample = "0.8"
 
         # add noise or not

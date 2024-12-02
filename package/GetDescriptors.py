@@ -140,7 +140,6 @@ def get_single_snapshot(work_path, mut, refname, trajname, startframe, endframe,
 
     shutil.copy(os.path.join(work_path, mut, refname), os.path.join(des_path, refname))
     shutil.copy(os.path.join(work_path, mut, trajname), os.path.join(des_path, trajname))
-    print(os.path.join(work_path, mut, trajname))
 
     cmd.load(os.path.join(des_path, refname), "structure")
     cmd.load_traj(os.path.join(des_path, trajname))

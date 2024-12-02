@@ -60,40 +60,52 @@ def get_every_descriptor(i):
 
         remove_files(des_path)
 
+def GB_train_predict(params):
+
+    param = params[0]
+
+    n_es = param[0]
+    max_dep = param[1]
+    lr = param[2]
+    sample = param[3]
+
+    train_input_vec = params[1]
+    train_feature = params[2]
+    train_labels = params[3]
+    predict_input_vec = params[4] 
+
+    model = GB_model_train(train_feature, train_labels, n_es, max_dep, lr, sample)
+    GB_model_pretraindata(model, train_input_vec, n_es, max_dep, lr, sample)
+    GB_model_predict(model, predict_input_vec, n_es, max_dep, lr, sample)
+
 def train_and_predict():
 
     train_lst = get_lst(trainlist)
     predict_lst = get_lst(predictlist)
 
-    input_vec, train_names, train_feature, train_labels = GB_data_load(train_lst)
+    train_input_vec, train_names, train_feature, train_labels, predict_input_vec = GB_data_load(train_lst, predict_lst)
     params = GB_params_adjust(n_estimators, max_depth, learning_rate, subsample)
+    params = [[i, train_input_vec, train_feature, train_labels, predict_input_vec] for i in params]
+    print("Starting Train: ")
 
-    for i in params:
-        
-        n_es = i[0]
-        max_dep = i[1]
-        lr = i[2]
-        sample = i[3]
-
-        model = GB_model_train(train_feature, train_labels, n_es, max_dep, lr, sample)
-        GB_model_pretraindata(model, input_vec, n_es, max_dep, lr, sample)
-        GB_model_predict(model, predict_lst, n_es, max_dep, lr, sample)
+    with ProcessPoolExecutor(max_workers=int(cpus)) as executor:
+        executor.map(GB_train_predict, params)    
 
 def run():
     
     start = time.time()
 
-    mk_files()
+    # mk_files()
         
-    train_lst = get_lst(trainlist)
-    with ProcessPoolExecutor(max_workers=int(cpus)) as executor:
-        executor.map(get_every_descriptor, train_lst)
+    # train_lst = get_lst(trainlist)
+    # with ProcessPoolExecutor(max_workers=int(cpus)) as executor:
+    #     executor.map(get_every_descriptor, train_lst)
 
     # predict_lst = get_lst(predictlist)
     # with ProcessPoolExecutor(max_workers=int(cpus)) as executor:
     #     executor.map(get_every_descriptor, predict_lst)
 
-    # train_and_predict()
+    train_and_predict()
         
     end = time.time()
     runtime_h = (end - start) / 3600
