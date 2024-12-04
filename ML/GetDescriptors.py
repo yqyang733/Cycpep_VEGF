@@ -1,6 +1,7 @@
 import os
 import math
 import pybel
+import pickle
 import shutil
 import numpy as np
 from pymol import cmd
@@ -185,6 +186,8 @@ def read_complexes(protein_list, ligand_list, des_path):
     
     # data, labels = dict(), dict()
     data = dict()
+    feature_inique = set()
+    all_frame_names = []
     
     for idx, (p_file, l_file) in enumerate(zip(protein_list, ligand_list)):
         
@@ -194,8 +197,6 @@ def read_complexes(protein_list, ligand_list, des_path):
         protein atoms coords : The coordinates of each atom.
         protein bonds : Store each atom's bond in an undirected graph((start, end),(start, end)).        
         '''
-
-        p_file
 
         ligand_atoms_type, ligand_atoms_type_index_dict, ligand_atoms_coords, ligand_bonds = read_protein_file((open(os.path.join(des_path, l_file), "r")).readlines())
         
@@ -216,12 +217,21 @@ def read_complexes(protein_list, ligand_list, des_path):
         protein_name = p_file.split("/")[-1].split(".")[0]
         ligand_name = l_file.split("/")[-1].split(".")[0]
         
-        name = protein_name + "/" + ligand_name
+        name = protein_name + "_" + ligand_name
+        all_frame_names.append(name)
+
+        feature_inique.update(get_all_features_1(graphs))
+
+        with open(os.path.join(des_path, name + ".pkl"), "wb") as f:
+            pickle.dump(graphs, f)
         
-        data[name] = graphs
+    for i in all_frame_names:
+        with open(os.path.join(des_path, i + ".pkl"), "rb") as f:
+            graphs = pickle.load(f)
+        data[i] = make_data_1(graphs, feature_inique)
         # labels[name] = labels_list[idx]
         
-    return data
+    return feature_inique, data
 
 def read_protein_file(lines):
     
@@ -508,6 +518,25 @@ def get_all_features(graphs_dict):
 
     return all_features
 
+def get_all_features_1(graphs_dict):
+
+    all_features = dict()
+        
+    for z in graphs_dict.keys():
+        for x in graphs_dict[z]:
+            tmp = list()
+            for y in x.keys():
+                tmp.append((y, x[y]))
+            tmp = tuple(sorted(tmp))
+            if tmp in all_features:
+                all_features[tmp] += 1
+            else:
+                all_features[tmp] = 1
+
+    all_features = np.array(list(all_features.keys()),dtype=object)
+
+    return all_features
+
 def make_data(graphs_dict, all_features):    
      
     data = dict()
@@ -536,3 +565,26 @@ def make_data(graphs_dict, all_features):
         data[name] = np.array(row_vetor, dtype = np.float32)    
         
     return data
+
+def make_data_1(graphs_dict, all_features):    
+    
+    whole_descriptors = dict()
+    
+    for type in graphs_dict.keys():
+        
+        ''' 
+        one descriptor check  
+        e.g. (16, 16):[{(1, 16, 6, '1'): 2, (0, 16, 6, '1'): 1}, ...]    
+        '''
+        for descriptor in graphs_dict[type]:
+            if tuple(sorted(descriptor.items())) in whole_descriptors:
+                whole_descriptors[tuple(sorted(descriptor.items()))] += 1
+            else:
+                whole_descriptors[tuple(sorted(descriptor.items()))] = 1  
+    
+    ''' Create a row vector for each complex. '''
+    row_vetor = list()
+    for selected_descriptor in  all_features:
+        row_vetor.append(whole_descriptors[selected_descriptor]) if selected_descriptor in whole_descriptors else row_vetor.append(0)
+            
+    return np.array(row_vetor, dtype = np.float32)    

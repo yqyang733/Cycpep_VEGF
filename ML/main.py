@@ -53,9 +53,9 @@ def get_every_descriptor(i):
         pass
     else:
         protein_list, ligand_list, des_path = get_single_snapshot(trajpath, i.split(",")[0], refstructure, traj, startframe, endframe, step, partA, partB, errlog)           
-        graphs_dict = read_complexes(protein_list, ligand_list, des_path)
-        all_features = get_all_features(graphs_dict)
-        data = make_data(graphs_dict, all_features)
+        all_features, data = read_complexes(protein_list, ligand_list, des_path)
+        # all_features = get_all_features(graphs_dict)
+        # data = make_data(graphs_dict, all_features)
 
         with open(os.path.join("Descriptors", "input_vectors_" + i.split(",")[0] + ".pkl"), "wb") as f:
             pickle.dump((all_features, data), f) 
