@@ -1,6 +1,5 @@
 import os
 import math
-import random
 import pybel
 import shutil
 import numpy as np
@@ -167,16 +166,18 @@ def get_single_snapshot(work_path, mut, refname, trajname, startframe, endframe,
 
     cmd.delete("all")
 
-    sample = random.sample(list(zip(r_lst, l_lst)), len(list(range(startframe, endframe, step)))-len(r_lst))
-    for i, j in sample:
-        r_lst.append(i)
-        l_lst.append(j)
+    sample = np.random.choice(range(len(list(zip(r_lst, l_lst)))), len(list(range(startframe, endframe, step)))-len(r_lst))
+    for i in sample:
+        r_lst.append(list(zip(r_lst, l_lst))[i][0])
+        l_lst.append(list(zip(r_lst, l_lst))[i][1])
 
     # mean = float(val)
 
     # r_lst = ["{0}_{1}_r.mol2".format(mut, str(i)) for i in range(startframe, endframe, step)]
     # l_lst = ["{0}_{1}_l.mol2".format(mut, str(i)) for i in range(startframe, endframe, step)]
     # label = [mean for i in range(startframe, endframe, step)]
+    print("r_lst", r_lst)
+    print("l_lst", l_lst)
 
     return r_lst, l_lst, des_path
 
