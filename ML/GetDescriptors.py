@@ -111,7 +111,7 @@ def split_pdb(pdb, partA, partB, des_path):
     PRO.close()
 
     if not os.path.getsize(os.path.join(des_path, str(pdb).replace(".pdb", "_r.pdb"))):
-        return "0", "0"
+        return str(pdb).replace(".pdb", "_r.mol2"), str(pdb).replace(".pdb", "_l.mol2"), "0"
     else:
         pdb1 = Pdb(os.path.join(des_path, str(pdb).replace(".pdb", "_r.pdb")))
         pdb1.cont = pdb1.renumber_residues(start=1, reset=False)
@@ -134,7 +134,7 @@ def split_pdb(pdb, partA, partB, des_path):
         output.write(mol)
         output.close()
     
-    return str(pdb).replace(".pdb", "_r.mol2"), str(pdb).replace(".pdb", "_l.mol2")
+    return str(pdb).replace(".pdb", "_r.mol2"), str(pdb).replace(".pdb", "_l.mol2"), "1"
 
 def get_single_snapshot(work_path, mut, refname, trajname, startframe, endframe, step, partA, partB, errlog):
 
@@ -142,6 +142,8 @@ def get_single_snapshot(work_path, mut, refname, trajname, startframe, endframe,
     Split the molecular dynamics trajectory file into individual PDB structure files, one frame per file.
     '''
 
+    eror_dict = dict()
+    eror_lst = list()
     des_path = os.path.join("Descriptors", mut)
     mk_files(des_path)
 
@@ -153,36 +155,40 @@ def get_single_snapshot(work_path, mut, refname, trajname, startframe, endframe,
     
     r_lst = []
     l_lst = []
+    r_lst_true = []
+    l_lst_true = []    
     for i in range(startframe, endframe, step):
-        cmd.select("aaaaaaa", "(br. all within {0} of chain {1})".format(threshold+2, "+".join(partA)), state = i)
+        cmd.select("aaaaaaa", "(br. all within {0} of chain {1})".format(threshold, "+".join(partA)), state = i)
         cmd.save(os.path.join(des_path, "{0}_{1}.pdb".format(mut, str(i))), selection="(aaaaaaa)", state = i)
-        r_l, l_l = split_pdb("{0}_{1}.pdb".format(mut, str(i)), partA, partB, des_path)
+        r_l, l_l, flag = split_pdb("{0}_{1}.pdb".format(mut, str(i)), partA, partB, des_path)
 
-        if r_l != "0":
-            r_lst.append(r_l)
-            l_lst.append(l_l)
-        else :
+        r_lst.append(r_l)
+        l_lst.append(l_l)
+        if flag == "0":
+            eror_lst.append((r_l, l_l))
             errlog.write("{0}_{1}.pdb".format(mut, str(i)) + "\n")
             errlog.flush()
+        else:
+            r_lst_true.append(r_l)
+            l_lst_true.append(l_l)
 
     cmd.delete("all")
 
-    sample = np.random.choice(range(len(list(zip(r_lst, l_lst)))), len(list(range(startframe, endframe, step)))-len(r_lst))
-    for i in sample:
-        r_lst.append(list(zip(r_lst, l_lst))[i][0])
-        l_lst.append(list(zip(r_lst, l_lst))[i][1])
+    sample = np.random.choice(range(len(list(zip(r_lst_true, l_lst_true)))), len(eror_lst))
+    for i in range(len(sample)):
+        eror_dict[eror_lst[i]] = tuple(list(zip(r_lst_true, l_lst_true))[sample[i]])
 
     # mean = float(val)
 
     # r_lst = ["{0}_{1}_r.mol2".format(mut, str(i)) for i in range(startframe, endframe, step)]
     # l_lst = ["{0}_{1}_l.mol2".format(mut, str(i)) for i in range(startframe, endframe, step)]
     # label = [mean for i in range(startframe, endframe, step)]
-    print("r_lst", r_lst)
-    print("l_lst", l_lst)
+    # print("r_lst", r_lst)
+    # print("l_lst", l_lst)
 
-    return r_lst, l_lst, des_path
+    return r_lst, l_lst, des_path, eror_dict
 
-def read_complexes(protein_list, ligand_list, des_path):
+def read_complexes(protein_list, ligand_list, des_path, eror_dict):
     
     # data, labels = dict(), dict()
     data = dict()
@@ -198,9 +204,15 @@ def read_complexes(protein_list, ligand_list, des_path):
         protein bonds : Store each atom's bond in an undirected graph((start, end),(start, end)).        
         '''
 
-        ligand_atoms_type, ligand_atoms_type_index_dict, ligand_atoms_coords, ligand_bonds = read_protein_file((open(os.path.join(des_path, l_file), "r")).readlines())
-        
-        protein_atoms_type, protein_atoms_type_index_dict, protein_atoms_coords, protein_bonds = read_protein_file((open(os.path.join(des_path, p_file), "r")).readlines())
+        if (p_file, l_file) in eror_dict:
+            p_file_tmp = eror_dict[(p_file, l_file)][0]
+            l_file_tmp = eror_dict[(p_file, l_file)][1]
+
+            ligand_atoms_type, ligand_atoms_type_index_dict, ligand_atoms_coords, ligand_bonds = read_protein_file((open(os.path.join(des_path, l_file_tmp), "r")).readlines())
+            protein_atoms_type, protein_atoms_type_index_dict, protein_atoms_coords, protein_bonds = read_protein_file((open(os.path.join(des_path, p_file_tmp), "r")).readlines())
+        else:
+            ligand_atoms_type, ligand_atoms_type_index_dict, ligand_atoms_coords, ligand_bonds = read_protein_file((open(os.path.join(des_path, l_file), "r")).readlines())  
+            protein_atoms_type, protein_atoms_type_index_dict, protein_atoms_coords, protein_bonds = read_protein_file((open(os.path.join(des_path, p_file), "r")).readlines())
 
         '''
         Find all cases where the distance between the ligand and the protein atom is less than a certain threshold.
@@ -219,7 +231,8 @@ def read_complexes(protein_list, ligand_list, des_path):
         
         name = protein_name + "_" + ligand_name
         all_frame_names.append(name)
-
+        print("graphs", graphs)
+        print("get_all_features(graphs)", get_all_features(graphs))
         feature_inique.update(get_all_features(graphs))
 
         with open(os.path.join(des_path, name + ".pkl"), "wb") as f:
@@ -535,7 +548,7 @@ def make_data(graphs_dict, all_features):
     
     ''' Create a row vector for each complex. '''
     row_vetor = list()
-    for selected_descriptor in  all_features:
+    for selected_descriptor in all_features:
         row_vetor.append(whole_descriptors[selected_descriptor]) if selected_descriptor in whole_descriptors else row_vetor.append(0)
             
     return np.array(row_vetor, dtype = np.float32)    
