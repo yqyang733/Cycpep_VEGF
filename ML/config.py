@@ -13,7 +13,7 @@ class Config():
         self.get_des = "all"   # all or rank
         self.rank = 10
         self.channels = 1
-        self.cpus = 25
+        self.cpus = 20
         self.threshold = 10
 
         # data path

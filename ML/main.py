@@ -54,8 +54,6 @@ def get_every_descriptor(i):
     else:
         protein_list, ligand_list, des_path = get_single_snapshot(trajpath, i.split(",")[0], refstructure, traj, startframe, endframe, step, partA, partB, errlog)           
         all_features, data = read_complexes(protein_list, ligand_list, des_path)
-        # all_features = get_all_features(graphs_dict)
-        # data = make_data(graphs_dict, all_features)
 
         with open(os.path.join("Descriptors", "input_vectors_" + i.split(",")[0] + ".pkl"), "wb") as f:
             pickle.dump((all_features, data), f) 
@@ -100,10 +98,10 @@ def run():
     mk_files()
         
     train_lst = get_lst(trainlist)
-    # with ProcessPoolExecutor(max_workers=int(cpus)) as executor:
-    #     executor.map(get_every_descriptor, train_lst)
-    for aa in train_lst:
-        get_every_descriptor(aa)
+    with ProcessPoolExecutor(max_workers=int(cpus)) as executor:
+        executor.map(get_every_descriptor, train_lst)
+    # for aa in train_lst:
+    #     get_every_descriptor(aa)
 
     # predict_lst = get_lst(predictlist)
     # with ProcessPoolExecutor(max_workers=int(cpus)) as executor:
