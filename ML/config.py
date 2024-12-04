@@ -2,7 +2,7 @@ class Config():
     def __init__(self):
         
         # global settings
-        self.trajpath = "../../all_traj/"
+        self.trajpath = "../../../all_traj/"
         self.refstructure = "complex.psf"
         self.traj = "com-prodstep.dcd"
         self.partA = ["M",]     # chain ID
@@ -14,6 +14,7 @@ class Config():
         self.rank = 10
         self.channels = 1
         self.cpus = 25
+        self.threshold = 10
 
         # data path
         self.trainlist = "trainlst.dat"

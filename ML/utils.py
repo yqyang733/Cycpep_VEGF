@@ -101,8 +101,8 @@ def plot_traindata_predictdata_scatter(f_input):
 
 def remove_traj_water_ions(i):
 
-    tcl = open(os.path.join(i, "tcl"), "w")
-    tcl.write("""mol new complex.psf waitfor all
+    ionstcl = open(os.path.join(i, "ionstcl"), "w")
+    ionstcl.write("""mol new complex.psf waitfor all
 mol addfile com-prodstep.dcd waitfor all
 
 set sel_save [atomselect top "not (resname TIP3 or resname SOD or resname CLA)"]
@@ -113,11 +113,28 @@ animate write dcd com-prodstep.dcd sel $sel_save beg 0 end 999 skip 1 0
 
 quit
 """)
-    tcl.close()
-    command = "/public/home/yqyang/software/vmd1.9.3-install/bin/vmd -dispdev text -e tcl"
+    ionstcl.close()
+
+    pbctcl = open(os.path.join(i, "pbctcl"), "w")
+    pbctcl.write("""package require pbctools
+mol new complex.psf waitfor all
+mol addfile com-prodstep.dcd waitfor all
+
+pbc wrap -all -compound segid -center com -centersel "protein"
+
+animate write dcd com-prodstep.dcd
+
+quit
+""")
+    pbctcl.close()
+
+    command_ions = "/public/home/yqyang/software/vmd1.9.3-install/bin/vmd -dispdev text -e ionstcl"
+    command_pbc = "/public/home/yqyang/software/vmd1.9.3-install/bin/vmd -dispdev text -e pbctcl"
     os.chdir(i)
-    os.system(command)
-    os.remove("tcl")
+    os.system(command_ions)
+    os.system(command_pbc)
+    os.remove("ionstcl")
+    os.remove("pbctcl")
     os.chdir("..")
 
 def main():

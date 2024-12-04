@@ -1,5 +1,6 @@
 import os
 import math
+import random
 import pybel
 import shutil
 import numpy as np
@@ -9,6 +10,7 @@ from config import Config
 
 get_des              =       Config().get_des
 rank                 =       Config().rank
+threshold            =       float(Config().threshold)
 
 def mk_files(fle):
 
@@ -108,28 +110,33 @@ def split_pdb(pdb, partA, partB, des_path):
     MUT.close()
     PRO.close()
 
-    pdb1 = Pdb(os.path.join(des_path, str(pdb).replace(".pdb", "_r.pdb")))
-    pdb1.cont = pdb1.renumber_residues(start=1, reset=False)
-    PRO = open(os.path.join(des_path, str(pdb).replace(".pdb", "_r_renum.pdb")), "w")
-    PRO.write("\n".join(pdb1.cont))
-    PRO.close()
+    if not os.path.getsize(os.path.join(des_path, str(pdb).replace(".pdb", "_r.pdb"))):
+        return "0", "0"
+    else:
+        pdb1 = Pdb(os.path.join(des_path, str(pdb).replace(".pdb", "_r.pdb")))
+        pdb1.cont = pdb1.renumber_residues(start=1, reset=False)
+        PRO = open(os.path.join(des_path, str(pdb).replace(".pdb", "_r_renum.pdb")), "w")
+        PRO.write("\n".join(pdb1.cont))
+        PRO.close()
 
-    pdb1 = Pdb(os.path.join(des_path, str(pdb).replace(".pdb", "_l.pdb")))
-    pdb1.cont = pdb1.renumber_residues(start=1, reset=False)
-    MUT = open(os.path.join(des_path, str(pdb).replace(".pdb", "_l_renum.pdb")), "w")
-    MUT.write("\n".join(pdb1.cont))
-    MUT.close()
-            
-    mol = next(pybel.readfile("pdb", os.path.join(des_path, str(pdb).replace(".pdb", "_r_renum.pdb"))))
-    output = pybel.Outputfile("mol2", os.path.join(des_path, str(pdb).replace(".pdb", "_r.mol2")), overwrite=True)
-    output.write(mol)
-    output.close()
-    mol = next(pybel.readfile("pdb", os.path.join(des_path, str(pdb).replace(".pdb", "_l_renum.pdb"))))
-    output = pybel.Outputfile("mol2", os.path.join(des_path, str(pdb).replace(".pdb", "_l.mol2")), overwrite=True)
-    output.write(mol)
-    output.close()
+        pdb1 = Pdb(os.path.join(des_path, str(pdb).replace(".pdb", "_l.pdb")))
+        pdb1.cont = pdb1.renumber_residues(start=1, reset=False)
+        MUT = open(os.path.join(des_path, str(pdb).replace(".pdb", "_l_renum.pdb")), "w")
+        MUT.write("\n".join(pdb1.cont))
+        MUT.close()
+                
+        mol = next(pybel.readfile("pdb", os.path.join(des_path, str(pdb).replace(".pdb", "_r_renum.pdb"))))
+        output = pybel.Outputfile("mol2", os.path.join(des_path, str(pdb).replace(".pdb", "_r.mol2")), overwrite=True)
+        output.write(mol)
+        output.close()
+        mol = next(pybel.readfile("pdb", os.path.join(des_path, str(pdb).replace(".pdb", "_l_renum.pdb"))))
+        output = pybel.Outputfile("mol2", os.path.join(des_path, str(pdb).replace(".pdb", "_l.mol2")), overwrite=True)
+        output.write(mol)
+        output.close()
+    
+    return str(pdb).replace(".pdb", "_r.mol2"), str(pdb).replace(".pdb", "_l.mol2")
 
-def get_single_snapshot(work_path, mut, refname, trajname, startframe, endframe, step, partA, partB):
+def get_single_snapshot(work_path, mut, refname, trajname, startframe, endframe, step, partA, partB, errlog):
 
     '''
     Split the molecular dynamics trajectory file into individual PDB structure files, one frame per file.
@@ -144,16 +151,31 @@ def get_single_snapshot(work_path, mut, refname, trajname, startframe, endframe,
     cmd.load(os.path.join(des_path, refname), "structure")
     cmd.load_traj(os.path.join(des_path, trajname))
     
+    r_lst = []
+    l_lst = []
     for i in range(startframe, endframe, step):
-        cmd.save(os.path.join(des_path, "{0}_{1}.pdb".format(mut, str(i))), state = i)
-        split_pdb("{0}_{1}.pdb".format(mut, str(i)), partA, partB, des_path)
+        cmd.select("aaaaaaa", "(br. all within {0} of chain {1})".format(threshold+2, "+".join(partA)), state = i)
+        cmd.save(os.path.join(des_path, "{0}_{1}.pdb".format(mut, str(i))), selection="(aaaaaaa)", state = i)
+        r_l, l_l = split_pdb("{0}_{1}.pdb".format(mut, str(i)), partA, partB, des_path)
+
+        if r_l != "0":
+            r_lst.append(r_l)
+            l_lst.append(l_l)
+        else :
+            errlog.write("{0}_{1}.pdb".format(mut, str(i)) + "\n")
+            errlog.flush()
 
     cmd.delete("all")
 
+    sample = random.sample(list(zip(r_lst, l_lst)), len(list(range(startframe, endframe, step)))-len(r_lst))
+    for i, j in sample:
+        r_lst.append(i)
+        l_lst.append(j)
+
     # mean = float(val)
 
-    r_lst = ["{0}_{1}_r.mol2".format(mut, str(i)) for i in range(startframe, endframe, step)]
-    l_lst = ["{0}_{1}_l.mol2".format(mut, str(i)) for i in range(startframe, endframe, step)]
+    # r_lst = ["{0}_{1}_r.mol2".format(mut, str(i)) for i in range(startframe, endframe, step)]
+    # l_lst = ["{0}_{1}_l.mol2".format(mut, str(i)) for i in range(startframe, endframe, step)]
     # label = [mean for i in range(startframe, endframe, step)]
 
     return r_lst, l_lst, des_path
@@ -328,8 +350,6 @@ Find protein and ligand atom pairs within a certain distance.
 '''        
 def cal_distance(ligand_coords, protein_coords):
         
-        threshold = 10.
-
         lig_pro_matrix = []
         for i in ligand_coords:
             tmp = []
@@ -337,7 +357,7 @@ def cal_distance(ligand_coords, protein_coords):
                 tmp.append(distance_x_y_z(i, j))
             lig_pro_matrix.append(tmp)
 
-        distance = np.array(lig_pro_matrix, dtype=np.float64)
+        distance = np.array(lig_pro_matrix, dtype=np.float32)
         rows, cols = np.where(distance <= threshold)
                 
         return rows, cols, distance

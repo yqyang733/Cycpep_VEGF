@@ -25,6 +25,8 @@ learning_rate        =       Config().learning_rate
 subsample            =       Config().subsample
 cpus                 =       Config().cpus
 
+errlog = open("errlog", "w")
+
 def mk_files():
 
     if not os.path.exists("Descriptors"):
@@ -50,7 +52,7 @@ def get_every_descriptor(i):
     if os.path.exists(os.path.join("Descriptors", "input_vectors_" + i.split(",")[0] + ".pkl")):
         pass
     else:
-        protein_list, ligand_list, des_path = get_single_snapshot(trajpath, i.split(",")[0], refstructure, traj, startframe, endframe, step, partA, partB)           
+        protein_list, ligand_list, des_path = get_single_snapshot(trajpath, i.split(",")[0], refstructure, traj, startframe, endframe, step, partA, partB, errlog)           
         graphs_dict = read_complexes(protein_list, ligand_list, des_path)
         all_features = get_all_features(graphs_dict)
         data = make_data(graphs_dict, all_features)
@@ -95,17 +97,19 @@ def run():
     
     start = time.time()
 
-    # mk_files()
+    mk_files()
         
-    # train_lst = get_lst(trainlist)
+    train_lst = get_lst(trainlist)
     # with ProcessPoolExecutor(max_workers=int(cpus)) as executor:
     #     executor.map(get_every_descriptor, train_lst)
+    for aa in train_lst:
+        get_every_descriptor(aa)
 
     # predict_lst = get_lst(predictlist)
     # with ProcessPoolExecutor(max_workers=int(cpus)) as executor:
     #     executor.map(get_every_descriptor, predict_lst)
 
-    train_and_predict()
+    # train_and_predict()
         
     end = time.time()
     runtime_h = (end - start) / 3600
