@@ -526,7 +526,7 @@ def get_all_features(graphs_dict):
             else:
                 all_features[tmp] = 1
 
-    all_features = np.array(list(all_features.keys()),dtype=object)
+    all_features = list(all_features.keys())
 
     return all_features
 

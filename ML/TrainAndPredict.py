@@ -66,7 +66,7 @@ def data_prepare(trainlst, predictlst):
     train_all_vec_everymut = []
     predict_all_vec_everymut = []
     lst = trainlst + predictlst
-    all_titles = np.array([])
+    all_titles = set()
 
     for i in lst:
         
@@ -79,7 +79,7 @@ def data_prepare(trainlst, predictlst):
             all_features, graphs_dict = pickle.load(f)
 
         if flag == "train":
-            all_titles = np.concatenate((all_titles, all_features), axis=0)
+            all_titles.update(all_features)
 
         if noise:
             se = float(i.split(",")[2])
@@ -115,8 +115,6 @@ def data_prepare(trainlst, predictlst):
             train_all_vec_everymut.append([names, all_features, graphs, label_indivial])
         elif flag == "predict":
             predict_all_vec_everymut.append([names, all_features, graphs, label_indivial])
-
-    all_titles = set(all_titles)
 
     train_all_vec_lst = []
     predict_all_vec_lst = []
