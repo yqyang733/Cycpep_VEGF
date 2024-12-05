@@ -244,8 +244,8 @@ def read_complexes(protein_list, ligand_list, des_path):
             pickle.dump(graphs, f)
 
     feature_inique = np.array(list(set(feature_inique)), dtype=object)
-    print("feature_inique", feature_inique)
-    print("len(feature_inique)", len(feature_inique))
+    # print("feature_inique", feature_inique)
+    # print("len(feature_inique)", len(feature_inique))
         
     for i in all_frame_names:
         with open(os.path.join(des_path, i + ".pkl"), "rb") as f:

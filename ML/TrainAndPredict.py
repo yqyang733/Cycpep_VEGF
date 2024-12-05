@@ -80,8 +80,8 @@ def data_prepare(trainlst, predictlst):
             all_features, graphs_dict = pickle.load(f)
         
         # all_features = np.array(list(all_features), dtype=object)
-        print("all_features:", all_features)
-        print("len(all_features)", len(all_features))
+        # print("all_features:", all_features)
+        # print("len(all_features)", len(all_features))
 
         if flag == "train":
             # all_titles.update(all_features)
@@ -124,15 +124,15 @@ def data_prepare(trainlst, predictlst):
 
     all_titles = set(all_titles)
     # all_titles = np.array(list(all_titles), dtype=object)
-    print("all_titles", all_titles)
-    print("len(all_titles)", len(all_titles))
+    # print("all_titles", all_titles)
+    # print("len(all_titles)", len(all_titles))
     train_all_vec_lst = []
     predict_all_vec_lst = []
 
     for names, all_features, graphs, label_indivial in train_all_vec_everymut:
 
         graphs = reorganize_array(graphs, all_features, all_titles)
-        print("graphs[:5]", graphs[:5])
+        # print("graphs[:5]", graphs[:5])
         for bb in range(len(names)):
             train_all_vec_lst.append([names[bb], graphs[bb], label_indivial[bb]])
 
@@ -152,28 +152,28 @@ def select_descriptors_data(lst, indices, mode):
         if mode == "train":
             all_vec = np.array([row[1] for row in lst])
             all_vec = all_vec.reshape(-1, all_vec.shape[-1])
-            print("all_vec", all_vec)
-            print("all_vec[:5]", all_vec[:5])
-            print("all_vec[1000:1005]", all_vec[1000:1005])
-            print("all_vec[2000:2005]", all_vec[2000:2005])
-            print("all_vec[3000:3005]", all_vec[3000:3005])
-            print("all_vec[4000:4005]", all_vec[4000:4005])
-            print("all_vec[5000:5005]", all_vec[5000:5005])
-            print("all_vec[6000:6005]", all_vec[6000:6005])
-            print("all_vec[7000:7005]", all_vec[7000:7005])
-            print("all_vec[8000:8005]", all_vec[8000:8005])
-            print("all_vec[9000:9005]", all_vec[9000:9005])
+            # print("all_vec", all_vec)
+            # print("all_vec[:5]", all_vec[:5])
+            # print("all_vec[1000:1005]", all_vec[1000:1005])
+            # print("all_vec[2000:2005]", all_vec[2000:2005])
+            # print("all_vec[3000:3005]", all_vec[3000:3005])
+            # print("all_vec[4000:4005]", all_vec[4000:4005])
+            # print("all_vec[5000:5005]", all_vec[5000:5005])
+            # print("all_vec[6000:6005]", all_vec[6000:6005])
+            # print("all_vec[7000:7005]", all_vec[7000:7005])
+            # print("all_vec[8000:8005]", all_vec[8000:8005])
+            # print("all_vec[9000:9005]", all_vec[9000:9005])
             fre = np.sum(all_vec, axis=0)
-            print("fre ", fre)
+            # print("fre ", fre)
             sorted_indices = np.argsort(fre)[::-1]
-            print("sorted_indices", sorted_indices)
+            # print("sorted_indices", sorted_indices)
         elif mode == "predict":
             sorted_indices = indices
 
         if descriptornums == -1:
             for i in lst:
                 # print("i[1]", i[1][:3])
-                print("np.array(i[1])[:,sorted_indices]", np.array(i[1])[:,sorted_indices][:3])
+                # print("np.array(i[1])[:,sorted_indices]", np.array(i[1])[:,sorted_indices][:3])
                 input_vec.append([i[0], np.array(i[1])[:,sorted_indices], i[2]])
         else:
             for i in lst:
@@ -223,21 +223,21 @@ def GB_data_load(trainlst, predictlst):
     
     train_all_vec_lst, predict_all_vec_lst = data_prepare(trainlst, predictlst)
     train_input_vec, sorted_indices = select_descriptors_data(train_all_vec_lst, "_", "train")
-    print("train_input_vec[:5]", train_input_vec[:5])
-    print("train_input_vec[1000:1005]", train_input_vec[1000:1005])
-    print("train_input_vec[2000:2005]", train_input_vec[2000:2005])
-    print("train_input_vec[3000:3005]", train_input_vec[3000:3005])
-    print("train_input_vec[4000:4005]", train_input_vec[4000:4005])
-    print("train_input_vec[5000:5005]", train_input_vec[5000:5005])
-    print("train_input_vec[6000:6005]", train_input_vec[6000:6005])
-    print("train_input_vec[7000:7005]", train_input_vec[7000:7005])
-    print("train_input_vec[8000:8005]", train_input_vec[8000:8005])
-    print("train_input_vec[9000:9005]", train_input_vec[9000:9005])
+    # print("train_input_vec[:5]", train_input_vec[:5])
+    # print("train_input_vec[1000:1005]", train_input_vec[1000:1005])
+    # print("train_input_vec[2000:2005]", train_input_vec[2000:2005])
+    # print("train_input_vec[3000:3005]", train_input_vec[3000:3005])
+    # print("train_input_vec[4000:4005]", train_input_vec[4000:4005])
+    # print("train_input_vec[5000:5005]", train_input_vec[5000:5005])
+    # print("train_input_vec[6000:6005]", train_input_vec[6000:6005])
+    # print("train_input_vec[7000:7005]", train_input_vec[7000:7005])
+    # print("train_input_vec[8000:8005]", train_input_vec[8000:8005])
+    # print("train_input_vec[9000:9005]", train_input_vec[9000:9005])
 
     random.shuffle(train_input_vec)
 
     predict_input_vec, _ = select_descriptors_data(predict_all_vec_lst, sorted_indices, "predict")
-    print("predict_input_vec", predict_input_vec[:5])
+    # print("predict_input_vec", predict_input_vec[:5])
 
     for a in train_input_vec:
         train_names.append(a[0])
