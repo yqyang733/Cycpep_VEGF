@@ -17,7 +17,7 @@ class Config():
         self.threshold = 10
 
         # data path
-        self.trainlist = "trainlst.dat"
+        self.trainlist = "trainlst_all.dat"
         self.predictlist = "predictlst.dat"
 
         # select descriptors

@@ -237,7 +237,10 @@ def read_complexes(protein_list, ligand_list, des_path):
         # print("get_all_features(graphs)", get_all_features(graphs))
         if get_all_features(graphs) != []:
             tmp_feature = np.array(get_all_features(graphs), dtype=object)
-            feature_inique = np.concatenate((feature_inique, tmp_feature), axis=0)
+            # print("tmp_feature.shape:", tmp_feature.shape)
+            # print("feature_inique.shape", feature_inique.shape)
+            if len(tmp_feature.shape) == len(feature_inique.shape):
+                feature_inique = np.concatenate((feature_inique, tmp_feature), axis=0)
             # feature_inique.update(get_all_features(graphs))
 
         with open(os.path.join(des_path, name + ".pkl"), "wb") as f:
